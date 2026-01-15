@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowRight, Check, ExternalLink, FileText, Layout, Plus, RefreshCw, Trash2, Trophy, Newspaper } from "lucide-react";
-import logoImage from "@assets/generated_images/minimalist_geometric_logo_for_hello_jumble_ai_newsroom.png";
+import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
 
 export default function EditorialDesk() {
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);

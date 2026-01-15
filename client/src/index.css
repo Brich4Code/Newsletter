@@ -47,36 +47,68 @@
 }
 
 :root {
-  /* Slate-ish Dark Theme Base */
+  /* Happy Light Theme Base */
+  /* Background: Cream / Light Yellow tint */
+  --background: 45 29% 97%;
+  /* Foreground: Dark Blue/Slate */
+  --foreground: 222 47% 11%;
+
+  /* Card: White */
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+
+  /* Primary: Bright Sunny Orange */
+  --primary: 35 100% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Secondary: Sky Blue */
+  --secondary: 199 89% 68%;
+  --secondary-foreground: 0 0% 100%;
+
+  /* Muted: Darker Cream/Beige */
+  --muted: 45 20% 92%;
+  --muted-foreground: 215 20% 45%;
+
+  /* Accent: Very light sky blue */
+  --accent: 199 89% 92%;
+  --accent-foreground: 199 89% 30%;
+
+  /* Destructive: Soft Red */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Border: Warm Grey */
+  --border: 45 10% 85%;
+  --input: 45 10% 85%;
+  --ring: 35 100% 55%;
+
+  --radius: 0.75rem; /* Softer, rounder corners */
+}
+
+.dark {
+  /* Keep a dark mode available but adjust to fit the vibe if toggled */
   --background: 222 47% 11%;
   --foreground: 210 40% 98%;
-
   --card: 222 47% 14%;
   --card-foreground: 210 40% 98%;
-
   --popover: 222 47% 11%;
   --popover-foreground: 210 40% 98%;
-
-  --primary: 25 95% 53%; /* Jumble Orange */
+  --primary: 35 100% 55%;
   --primary-foreground: 210 40% 98%;
-
-  --secondary: 217 33% 22%;
+  --secondary: 199 89% 68%;
   --secondary-foreground: 210 40% 98%;
-
   --muted: 217 33% 17%;
   --muted-foreground: 215 20% 65%;
-
   --accent: 217 33% 22%;
   --accent-foreground: 210 40% 98%;
-
   --destructive: 0 63% 31%;
   --destructive-foreground: 210 40% 98%;
-
   --border: 217 33% 20%;
   --input: 217 33% 17%;
-  --ring: 25 95% 53%;
-
-  --radius: 0.5rem;
+  --ring: 35 100% 55%;
 }
 
 @layer base {
