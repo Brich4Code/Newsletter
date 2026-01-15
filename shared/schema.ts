@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, vector } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,12 +10,18 @@ export const leads = pgTable("leads", {
   url: text("url").notNull(),
   summary: text("summary").notNull(),
   relevanceScore: integer("relevance_score").notNull().default(0),
+  embedding: vector("embedding", { dimensions: 768 }),
+  factCheckStatus: text("fact_check_status").default("pending"),
+  primarySourceUrl: text("primary_source_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
+  embedding: true,
+  factCheckStatus: true,
+  primarySourceUrl: true,
 });
 
 export type InsertLead = z.infer<typeof insertLeadSchema>;
@@ -55,3 +61,39 @@ export const insertIssueSchema = createInsertSchema(issues).omit({
 
 export type InsertIssue = z.infer<typeof insertIssueSchema>;
 export type Issue = typeof issues.$inferSelect;
+
+// Newsletter history for deduplication
+export const newsletterHistory = pgTable("newsletter_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  url: text("url").notNull().unique(),
+  title: text("title").notNull(),
+  embedding: vector("embedding", { dimensions: 768 }),
+  publishedAt: timestamp("published_at").defaultNow().notNull(),
+});
+
+export const insertNewsletterHistorySchema = createInsertSchema(newsletterHistory).omit({
+  id: true,
+  publishedAt: true,
+});
+
+export type InsertNewsletterHistory = z.infer<typeof insertNewsletterHistorySchema>;
+export type NewsletterHistory = typeof newsletterHistory.$inferSelect;
+
+// Newsletter backlog for future story ideas
+export const newsletterBacklog = pgTable("newsletter_backlog", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  url: text("url").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  reason: text("reason").notNull(),
+  embedding: vector("embedding", { dimensions: 768 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertNewsletterBacklogSchema = createInsertSchema(newsletterBacklog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertNewsletterBacklog = z.infer<typeof insertNewsletterBacklogSchema>;
+export type NewsletterBacklog = typeof newsletterBacklog.$inferSelect;

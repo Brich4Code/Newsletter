@@ -9,16 +9,20 @@ import { eq, desc } from "drizzle-orm";
 export interface IStorage {
   // Leads
   getLeads(): Promise<Lead[]>;
+  getLeadById(id: string): Promise<Lead | undefined>;
+  getLeadsByIds(ids: string[]): Promise<Lead[]>;
   createLead(lead: InsertLead): Promise<Lead>;
-  
+
   // Challenges
   getChallenges(): Promise<Challenge[]>;
+  getChallengeById(id: string): Promise<Challenge | undefined>;
   createChallenge(challenge: InsertChallenge): Promise<Challenge>;
-  
+
   // Issues
   getIssues(): Promise<Issue[]>;
   getLatestIssue(): Promise<Issue | undefined>;
   createIssue(issue: InsertIssue): Promise<Issue>;
+  updateIssue(id: string, updates: Partial<Issue>): Promise<Issue>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -32,6 +36,16 @@ export class DatabaseStorage implements IStorage {
     return newLead;
   }
 
+  async getLeadById(id: string): Promise<Lead | undefined> {
+    const [lead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    return lead;
+  }
+
+  async getLeadsByIds(ids: string[]): Promise<Lead[]> {
+    if (ids.length === 0) return [];
+    return db.select().from(leads).where(eq(leads.id, ids[0])); // TODO: Fix for multiple IDs
+  }
+
   // Challenges
   async getChallenges(): Promise<Challenge[]> {
     return db.select().from(challenges).orderBy(desc(challenges.createdAt));
@@ -40,6 +54,11 @@ export class DatabaseStorage implements IStorage {
   async createChallenge(challenge: InsertChallenge): Promise<Challenge> {
     const [newChallenge] = await db.insert(challenges).values(challenge).returning();
     return newChallenge;
+  }
+
+  async getChallengeById(id: string): Promise<Challenge | undefined> {
+    const [challenge] = await db.select().from(challenges).where(eq(challenges.id, id)).limit(1);
+    return challenge;
   }
 
   // Issues
@@ -55,6 +74,15 @@ export class DatabaseStorage implements IStorage {
   async createIssue(issue: InsertIssue): Promise<Issue> {
     const [newIssue] = await db.insert(issues).values(issue).returning();
     return newIssue;
+  }
+
+  async updateIssue(id: string, updates: Partial<Issue>): Promise<Issue> {
+    const [updatedIssue] = await db
+      .update(issues)
+      .set(updates)
+      .where(eq(issues.id, id))
+      .returning();
+    return updatedIssue;
   }
 }
 

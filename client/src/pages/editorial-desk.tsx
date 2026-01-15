@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, publishIssue } from "@/lib/api";
+import { fetchLeads, fetchChallenges, publishIssue, startResearch } from "@/lib/api";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,28 @@ export default function EditorialDesk() {
     queryFn: fetchChallenges,
   });
 
+  // Research mutation
+  const researchMutation = useMutation({
+    mutationFn: startResearch,
+    onSuccess: () => {
+      toast({
+        title: "Research Started!",
+        description: "Agents are finding stories. Refresh in 2-5 minutes to see new leads.",
+      });
+      // Refetch leads after a delay to show new results
+      setTimeout(() => {
+        refetchLeads();
+      }, 120000); // 2 minutes
+    },
+    onError: () => {
+      toast({
+        title: "Research Failed",
+        description: "There was an error starting research. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Publish mutation
   const publishMutation = useMutation({
     mutationFn: publishIssue,
@@ -36,7 +58,7 @@ export default function EditorialDesk() {
         title: "Issue Published!",
         description: `Issue #${issue.issueNumber} has been saved to the database.`,
       });
-      
+
       // Reset selections after publishing
       setSelectedMain(null);
       setSelectedSecondary(null);
@@ -156,20 +178,38 @@ export default function EditorialDesk() {
             <h2 className="text-sm font-semibold flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-muted-foreground" />
               Incoming Wire
-              <Badge variant="secondary" className="ml-2 text-[10px] h-5">Live</Badge>
+              <Badge variant="secondary" className="ml-2 text-[10px] h-5">{leads.length} Leads</Badge>
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => refetchLeads()}
-              disabled={leadsLoading}
-            >
-              {leadsLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchLeads()}
+                disabled={leadsLoading}
+              >
+                {leadsLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => researchMutation.mutate()}
+                disabled={researchMutation.isPending}
+                className="bg-primary text-primary-foreground"
+              >
+                {researchMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 w-3 h-3 animate-spin" />
+                    Finding...
+                  </>
+                ) : (
+                  "Find Stories"
+                )}
+              </Button>
+            </div>
           </div>
           
           <ScrollArea className="flex-1">
