@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Check, ExternalLink, FileText, Layout, Plus, RefreshCw, Trash2, Trophy, Newspaper } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, FileText, Layout, Plus, RefreshCw, Trash2, Trophy, Newspaper, Database, FileText as FileIcon, Loader2 } from "lucide-react";
 import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
+import { toast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function EditorialDesk() {
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);
@@ -13,6 +21,20 @@ export default function EditorialDesk() {
   const [selectedSecondary, setSelectedSecondary] = useState<Lead | null>(null);
   const [selectedLinks, setSelectedLinks] = useState<Lead[]>([]);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  const handlePublish = () => {
+    setIsPublishing(true);
+    
+    // Simulate API call to Google Docs
+    setTimeout(() => {
+      setIsPublishing(false);
+      toast({
+        title: "Published to Google Docs",
+        description: "The issue has been successfully created in your Drive folder.",
+      });
+    }, 2000);
+  };
 
   const handleLeadClick = (lead: Lead) => {
     // Logic for selection mode? 
@@ -68,6 +90,10 @@ export default function EditorialDesk() {
         </div>
         
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+            <Database className="w-3 h-3" />
+            Supabase Connected
+          </div>
           <div className="flex flex-col items-end mr-2">
              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Completeness</span>
              <div className="flex gap-1 mt-1">
@@ -77,11 +103,48 @@ export default function EditorialDesk() {
                <div className={cn("w-8 h-1 rounded-full", selectedChallenge ? "bg-primary" : "bg-muted")}></div>
              </div>
           </div>
-          <Button size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20">
-            Publish Issue <ArrowRight className="ml-2 w-4 h-4" />
+          <Button 
+            size="lg" 
+            className="rounded-full px-8 shadow-lg shadow-primary/20"
+            onClick={handlePublish}
+            disabled={isPublishing}
+          >
+            {isPublishing ? (
+              <>
+                <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              <>
+                Publish Issue <ArrowRight className="ml-2 w-4 h-4" />
+              </>
+            )}
           </Button>
         </div>
       </header>
+
+      <Dialog open={isPublishing} onOpenChange={setIsPublishing}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileIcon className="w-5 h-5 text-blue-500" />
+              Syncing to Google Docs
+            </DialogTitle>
+            <DialogDescription>
+              Compiling your curated stories and formatting the newsletter layout...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+             <div className="relative">
+               <div className="w-12 h-12 rounded-full border-4 border-muted border-t-primary animate-spin" />
+               <div className="absolute inset-0 flex items-center justify-center">
+                 <Database className="w-4 h-4 text-muted-foreground animate-pulse" />
+               </div>
+             </div>
+             <p className="text-sm text-muted-foreground">Saving record to Supabase...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex-1 flex overflow-hidden">
         
