@@ -1,50 +1,75 @@
 import { useState } from "react";
-import { MOCK_LEADS, MOCK_CHALLENGES, Lead, Challenge, cn } from "@/lib/mock-data";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { fetchLeads, fetchChallenges, publishIssue } from "@/lib/api";
+import type { Lead, Challenge } from "@shared/schema";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Check, ExternalLink, FileText, Layout, Plus, RefreshCw, Trash2, Trophy, Newspaper, Database, FileText as FileIcon, Loader2 } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2 } from "lucide-react";
 import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
 import { toast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 export default function EditorialDesk() {
-  const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);
   const [selectedMain, setSelectedMain] = useState<Lead | null>(null);
   const [selectedSecondary, setSelectedSecondary] = useState<Lead | null>(null);
   const [selectedLinks, setSelectedLinks] = useState<Lead[]>([]);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
-  const [isPublishing, setIsPublishing] = useState(false);
+
+  // Fetch leads from API
+  const { data: leads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
+    queryKey: ["leads"],
+    queryFn: fetchLeads,
+  });
+
+  // Fetch challenges from API
+  const { data: challenges = [], isLoading: challengesLoading } = useQuery({
+    queryKey: ["challenges"],
+    queryFn: fetchChallenges,
+  });
+
+  // Publish mutation
+  const publishMutation = useMutation({
+    mutationFn: publishIssue,
+    onSuccess: (issue) => {
+      toast({
+        title: "Issue Published!",
+        description: `Issue #${issue.issueNumber} has been saved to the database.`,
+      });
+      
+      // Reset selections after publishing
+      setSelectedMain(null);
+      setSelectedSecondary(null);
+      setSelectedLinks([]);
+      setSelectedChallenge(null);
+    },
+    onError: () => {
+      toast({
+        title: "Publishing Failed",
+        description: "There was an error publishing the issue. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handlePublish = () => {
-    setIsPublishing(true);
-    
-    // Simulate API call to Google Docs
-    setTimeout(() => {
-      setIsPublishing(false);
+    if (!selectedMain) {
       toast({
-        title: "Published to Google Docs",
-        description: "The issue has been successfully created in your Drive folder.",
+        title: "Missing Main Story",
+        description: "Please select a main story before publishing.",
+        variant: "destructive",
       });
-    }, 2000);
-  };
+      return;
+    }
 
-  const handleLeadClick = (lead: Lead) => {
-    // Logic for selection mode? 
-    // For now, let's assume dragging or clicking assigns to the next available slot or context menu?
-    // Let's implement a simple "Select" logic:
-    // If Main is empty, go to Main.
-    // If Secondary is empty, go to Secondary.
-    // Else, add to links?
-    
-    // Better: Selection Buttons on the card itself.
+    publishMutation.mutate({
+      issueNumber: 0, // Will be auto-incremented by the server
+      mainStoryId: selectedMain.id,
+      secondaryStoryId: selectedSecondary?.id || null,
+      challengeId: selectedChallenge?.id || null,
+      quickLinkIds: selectedLinks.map(l => l.id),
+      googleDocsUrl: null,
+    });
   };
 
   const assignMain = (lead: Lead) => {
@@ -81,18 +106,18 @@ export default function EditorialDesk() {
       <header className="h-16 border-b border-border/40 bg-background/50 backdrop-blur sticky top-0 z-50 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded bg-primary/10 p-1">
-             <img src={logoImage} alt="Logo" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal opacity-90" />
+             <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="font-display font-bold text-lg tracking-tight leading-none">Editorial Desk</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Hello Jumble Edition #442</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Hello Jumble Newsroom</p>
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-            <Database className="w-3 h-3" />
-            Supabase Connected
+          <div className="flex items-center gap-2 mr-2 text-xs text-muted-foreground bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/30">
+            <Database className="w-3 h-3 text-emerald-500" />
+            <span className="text-emerald-500 font-medium">Database Connected</span>
           </div>
           <div className="flex flex-col items-end mr-2">
              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Completeness</span>
@@ -107,9 +132,9 @@ export default function EditorialDesk() {
             size="lg" 
             className="rounded-full px-8 shadow-lg shadow-primary/20"
             onClick={handlePublish}
-            disabled={isPublishing}
+            disabled={publishMutation.isPending || !selectedMain}
           >
-            {isPublishing ? (
+            {publishMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 w-4 h-4 animate-spin" />
                 Publishing...
@@ -123,29 +148,6 @@ export default function EditorialDesk() {
         </div>
       </header>
 
-      <Dialog open={isPublishing} onOpenChange={setIsPublishing}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileIcon className="w-5 h-5 text-blue-500" />
-              Syncing to Google Docs
-            </DialogTitle>
-            <DialogDescription>
-              Compiling your curated stories and formatting the newsletter layout...
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-8 space-y-4">
-             <div className="relative">
-               <div className="w-12 h-12 rounded-full border-4 border-muted border-t-primary animate-spin" />
-               <div className="absolute inset-0 flex items-center justify-center">
-                 <Database className="w-4 h-4 text-muted-foreground animate-pulse" />
-               </div>
-             </div>
-             <p className="text-sm text-muted-foreground">Saving record to Supabase...</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <div className="flex-1 flex overflow-hidden">
         
         {/* Column 1: The Wire (Source Material) */}
@@ -156,70 +158,87 @@ export default function EditorialDesk() {
               Incoming Wire
               <Badge variant="secondary" className="ml-2 text-[10px] h-5">Live</Badge>
             </h2>
-            <span className="text-xs text-muted-foreground">{leads.length} items</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => refetchLeads()}
+              disabled={leadsLoading}
+            >
+              {leadsLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+            </Button>
           </div>
           
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-3">
-              {leads.map(lead => (
-                <div 
-                  key={lead.id} 
-                  className={cn(
-                    "group relative p-4 rounded-xl border transition-all duration-200 bg-card hover:shadow-md",
-                    isSelected(lead.id) ? "border-primary/50 bg-primary/5" : "border-border/50 hover:border-primary/20"
-                  )}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                      {lead.source}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">98% Match</span>
-                  </div>
-                  
-                  <h3 className="font-display font-medium text-sm leading-snug mb-2 text-foreground/90">
-                    {lead.title}
-                  </h3>
-                  
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-3">
-                    {lead.summary}
-                  </p>
+            {leadsLoading ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                Loading leads...
+              </div>
+            ) : (
+              <div className="p-4 space-y-3">
+                {leads.map(lead => (
+                  <div 
+                    key={lead.id} 
+                    className={cn(
+                      "group relative p-4 rounded-xl border transition-all duration-200 bg-card hover:shadow-md",
+                      isSelected(lead.id) ? "border-primary/50 bg-primary/5" : "border-border/50 hover:border-primary/20"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                        {lead.source}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{lead.relevanceScore}% Match</span>
+                    </div>
+                    
+                    <h3 className="font-display font-medium text-sm leading-snug mb-2 text-foreground/90">
+                      {lead.title}
+                    </h3>
+                    
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-3">
+                      {lead.summary}
+                    </p>
 
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => assignMain(lead)}
-                      disabled={selectedMain?.id === lead.id}
-                    >
-                      Main
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => assignSecondary(lead)}
-                      disabled={selectedSecondary?.id === lead.id}
-                    >
-                      Secondary
-                    </Button>
-                     <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => toggleLink(lead)}
-                    >
-                      {selectedLinks.find(l => l.id === lead.id) ? "Remove" : "Link"}
-                    </Button>
-                  </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
+                        onClick={() => assignMain(lead)}
+                        disabled={selectedMain?.id === lead.id}
+                      >
+                        Main
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
+                        onClick={() => assignSecondary(lead)}
+                        disabled={selectedSecondary?.id === lead.id}
+                      >
+                        Secondary
+                      </Button>
+                       <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
+                        onClick={() => toggleLink(lead)}
+                      >
+                        {selectedLinks.find(l => l.id === lead.id) ? "Remove" : "Link"}
+                      </Button>
+                    </div>
 
-                  {/* Selection Indicator */}
-                  {isSelected(lead.id) && (
-                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  )}
-                </div>
-              ))}
-            </div>
+                    {isSelected(lead.id) && (
+                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </aside>
 
@@ -302,26 +321,32 @@ export default function EditorialDesk() {
                 <label className="text-sm font-medium flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-primary" /> Weekly Challenge
                 </label>
-                 <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-                   {MOCK_CHALLENGES.map(challenge => (
-                     <div 
-                        key={challenge.id}
-                        onClick={() => setSelectedChallenge(challenge)}
-                        className={cn(
-                          "p-3 rounded-lg cursor-pointer border transition-all hover:shadow-sm",
-                          selectedChallenge?.id === challenge.id 
-                            ? "bg-primary/10 border-primary shadow-sm" 
-                            : "bg-background border-border/50 hover:border-primary/30"
-                        )}
-                     >
-                       <div className="flex justify-between items-start">
-                         <h4 className="text-xs font-bold">{challenge.title}</h4>
-                         {selectedChallenge?.id === challenge.id && <Check className="w-3 h-3 text-primary" />}
+                 {challengesLoading ? (
+                   <div className="rounded-xl border border-border/50 bg-card p-4 text-center">
+                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                   </div>
+                 ) : (
+                   <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+                     {challenges.map(challenge => (
+                       <div 
+                          key={challenge.id}
+                          onClick={() => setSelectedChallenge(challenge)}
+                          className={cn(
+                            "p-3 rounded-lg cursor-pointer border transition-all hover:shadow-sm",
+                            selectedChallenge?.id === challenge.id 
+                              ? "bg-primary/10 border-primary shadow-sm" 
+                              : "bg-background border-border/50 hover:border-primary/30"
+                          )}
+                       >
+                         <div className="flex justify-between items-start">
+                           <h4 className="text-xs font-bold">{challenge.title}</h4>
+                           {selectedChallenge?.id === challenge.id && <Check className="w-3 h-3 text-primary" />}
+                         </div>
+                         <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{challenge.description}</p>
                        </div>
-                       <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{challenge.description}</p>
-                     </div>
-                   ))}
-                 </div>
+                     ))}
+                   </div>
+                 )}
               </section>
             </div>
 

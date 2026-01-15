@@ -1,38 +1,61 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { 
+  type Lead, type InsertLead, leads,
+  type Challenge, type InsertChallenge, challenges,
+  type Issue, type InsertIssue, issues
+} from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Leads
+  getLeads(): Promise<Lead[]>;
+  createLead(lead: InsertLead): Promise<Lead>;
+  
+  // Challenges
+  getChallenges(): Promise<Challenge[]>;
+  createChallenge(challenge: InsertChallenge): Promise<Challenge>;
+  
+  // Issues
+  getIssues(): Promise<Issue[]>;
+  getLatestIssue(): Promise<Issue | undefined>;
+  createIssue(issue: InsertIssue): Promise<Issue>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  // Leads
+  async getLeads(): Promise<Lead[]> {
+    return db.select().from(leads).orderBy(desc(leads.relevanceScore));
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async createLead(lead: InsertLead): Promise<Lead> {
+    const [newLead] = await db.insert(leads).values(lead).returning();
+    return newLead;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  // Challenges
+  async getChallenges(): Promise<Challenge[]> {
+    return db.select().from(challenges).orderBy(desc(challenges.createdAt));
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createChallenge(challenge: InsertChallenge): Promise<Challenge> {
+    const [newChallenge] = await db.insert(challenges).values(challenge).returning();
+    return newChallenge;
+  }
+
+  // Issues
+  async getIssues(): Promise<Issue[]> {
+    return db.select().from(issues).orderBy(desc(issues.publishedAt));
+  }
+
+  async getLatestIssue(): Promise<Issue | undefined> {
+    const [latestIssue] = await db.select().from(issues).orderBy(desc(issues.issueNumber)).limit(1);
+    return latestIssue;
+  }
+
+  async createIssue(issue: InsertIssue): Promise<Issue> {
+    const [newIssue] = await db.insert(issues).values(issue).returning();
+    return newIssue;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
