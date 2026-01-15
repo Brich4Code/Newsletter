@@ -1,0 +1,118 @@
+# Replit Setup Prompt
+
+Create a Python project called `hello-jumble-newsroom` with the following structure and boilerplate. Do not implement any logic—just set up the scaffolding with placeholder classes and functions.
+
+## File Structure
+
+```
+hello-jumble-newsroom/
+├── src/
+│   ├── __init__.py
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── scoophunter.py
+│   │   ├── editorial_board.py
+│   │   ├── investigator.py
+│   │   ├── writer.py
+│   │   ├── compliance_officer.py
+│   │   └── illustrator.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── orchestrator.py
+│   │   ├── memory.py
+│   │   └── fallback.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── rules_engine.py
+│   │   ├── link_validator.py
+│   │   └── embedding.py
+│   └── config.py
+├── tests/
+│   ├── __init__.py
+│   ├── test_rules_engine.py
+│   ├── test_deduplication.py
+│   └── test_compliance.py
+├── .env.example
+├── requirements.txt
+├── README.md
+└── run.py
+```
+
+## requirements.txt
+
+```
+openai>=1.0.0
+google-generativeai
+supabase
+httpx
+beautifulsoup4
+readability-lxml
+python-dotenv
+pydantic>=2.0
+tenacity
+pytest
+```
+
+## .env.example
+
+```
+PERPLEXITY_API_KEY=
+GEMINI_API_KEY=
+SUPABASE_URL=
+SUPABASE_KEY=
+NANO_BANANA_API_KEY=
+OPENAI_API_KEY=
+```
+
+## src/config.py
+
+Load environment variables using `python-dotenv` and expose them as module-level constants. Include a simple validation function that checks all required keys are present.
+
+## Agent Files
+
+Each agent file in `src/agents/` should contain:
+- A class named after the agent (e.g., `ScoopHunter`, `EditorialBoard`)
+- An `__init__` method that accepts a config object
+- A `run` method that returns `NotImplementedError` with a TODO comment
+- A docstring describing the agent's role (one sentence)
+
+## src/core/orchestrator.py
+
+Create an `Orchestrator` class that:
+- Accepts config in `__init__`
+- Has a `run_pipeline` method that will eventually call agents in sequence
+- For now, just logs "Pipeline not implemented" and returns None
+
+## src/core/memory.py
+
+Create a `MemoryStore` class with placeholder methods:
+- `check_duplicate(url: str) -> bool`
+- `add_to_history(story: dict) -> None`
+- `get_backlog() -> list`
+- `add_to_backlog(story: dict) -> None`
+
+## src/core/fallback.py
+
+Create a `FallbackHandler` class with:
+- `search_perplexity(query: str) -> dict`
+- `search_gemini(query: str) -> dict`
+- `search_with_fallback(query: str) -> dict` — this will try Perplexity first, then Gemini
+
+## run.py
+
+A simple entry point that:
+- Loads config
+- Instantiates the Orchestrator
+- Calls `run_pipeline()`
+- Includes `if __name__ == "__main__":` guard
+
+## README.md
+
+Brief description: "Agentic newsroom system for the Hello Jumble AI newsletter. Automates research, ranking, writing, and compliance checking."
+
+Include sections for:
+- Setup (install deps, copy .env.example to .env, add keys)
+- Usage (python run.py)
+- Project structure (brief explanation of agents, core, utils)
+
+Do not add implementation details beyond what's specified. This is scaffolding only.
