@@ -20,19 +20,30 @@ interface FormattingInstruction {
 /**
  * Service for creating and formatting Google Docs
  * Converts Markdown newsletter content into properly formatted Google Docs
+ * Uses lazy initialization to avoid crashes when credentials are not set at startup
  */
 export class GoogleDocsService {
-  private docs: docs_v1.Docs;
-  private drive: any;
-  private auth: JWT;
+  private docs: docs_v1.Docs | null = null;
+  private drive: any = null;
+  private auth: JWT | null = null;
 
-  constructor() {
+  /**
+   * Initialize the service (lazy - only called when first needed)
+   */
+  private initialize(): void {
+    if (this.auth) {
+      return; // Already initialized
+    }
+
     // Service Account authentication
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
     if (!email || !privateKey) {
-      throw new Error("Google Service Account credentials not configured");
+      throw new Error(
+        "Google Service Account credentials not configured. " +
+        "Please set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY in Replit Secrets."
+      );
     }
 
     this.auth = new JWT({
@@ -46,17 +57,21 @@ export class GoogleDocsService {
 
     this.docs = google.docs({ version: "v1", auth: this.auth });
     this.drive = google.drive({ version: "v3", auth: this.auth });
+
+    log("[Google Docs] Service initialized successfully", "docs");
   }
 
   /**
    * Create a fully formatted newsletter document in Google Docs
    */
   async createNewsletterDocument(content: NewsletterContent): Promise<string> {
+    this.initialize();
+
     try {
       log("[Google Docs] Creating newsletter document...", "docs");
 
       // 1. Create blank document
-      const doc = await this.docs.documents.create({
+      const doc = await this.docs!.documents.create({
         requestBody: {
           title: `Hello Jumble - Issue #${content.issueNumber}`,
         },
@@ -69,7 +84,7 @@ export class GoogleDocsService {
       const { plainText, formatting } = this.parseMarkdown(content.markdown);
 
       // 3. Insert all text at once
-      await this.docs.documents.batchUpdate({
+      await this.docs!.documents.batchUpdate({
         documentId,
         requestBody: {
           requests: [
@@ -87,7 +102,7 @@ export class GoogleDocsService {
       const formattingRequests = this.buildFormattingRequests(formatting);
 
       if (formattingRequests.length > 0) {
-        await this.docs.documents.batchUpdate({
+        await this.docs!.documents.batchUpdate({
           documentId,
           requestBody: {
             requests: formattingRequests,
@@ -260,7 +275,7 @@ export class GoogleDocsService {
     index: number
   ): Promise<void> {
     try {
-      await this.docs.documents.batchUpdate({
+      await this.docs!.documents.batchUpdate({
         documentId,
         requestBody: {
           requests: [
@@ -294,7 +309,7 @@ export class GoogleDocsService {
    */
   private async shareDocument(documentId: string, email: string): Promise<void> {
     try {
-      await this.drive.permissions.create({
+      await this.drive!.permissions.create({
         fileId: documentId,
         requestBody: {
           type: "user",
@@ -314,7 +329,7 @@ export class GoogleDocsService {
    */
   private async moveToFolder(documentId: string, folderId: string): Promise<void> {
     try {
-      await this.drive.files.update({
+      await this.drive!.files.update({
         fileId: documentId,
         addParents: folderId,
         fields: "id, parents",

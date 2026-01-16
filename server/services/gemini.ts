@@ -17,16 +17,27 @@ export interface SearchResult {
 /**
  * Service wrapper for Google Gemini AI
  * Provides access to Flash (fast reasoning) and Pro (complex tasks) models
+ * Uses lazy initialization to avoid crashes when API key is not set at startup
  */
 export class GeminiService {
-  private genAI: GoogleGenerativeAI;
-  private flashModel: GenerativeModel;
-  private proModel: GenerativeModel;
+  private genAI: GoogleGenerativeAI | null = null;
+  private flashModel: GenerativeModel | null = null;
+  private proModel: GenerativeModel | null = null;
 
-  constructor() {
+  /**
+   * Initialize the service (lazy - only called when first needed)
+   */
+  private initialize(): void {
+    if (this.genAI) {
+      return; // Already initialized
+    }
+
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) {
-      throw new Error("GOOGLE_AI_API_KEY environment variable is not set");
+      throw new Error(
+        "GOOGLE_AI_API_KEY environment variable is not set. " +
+        "Please configure it in Replit Secrets or your .env file."
+      );
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
@@ -40,6 +51,8 @@ export class GeminiService {
     this.proModel = this.genAI.getGenerativeModel({
       model: "gemini-1.5-pro",
     });
+
+    log("[Gemini] Service initialized successfully", "gemini");
   }
 
   /**
@@ -47,9 +60,11 @@ export class GeminiService {
    * Use for: Research, ranking, quick decisions
    */
   async generateWithFlash(prompt: string, options?: GenerationOptions): Promise<string> {
+    this.initialize();
+
     try {
       log("[Gemini Flash] Generating...", "gemini");
-      const result = await this.flashModel.generateContent({
+      const result = await this.flashModel!.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: options?.temperature ?? 0.7,
@@ -72,9 +87,11 @@ export class GeminiService {
    * Use for: Writing newsletters, fact-checking, complex analysis
    */
   async generateWithPro(prompt: string, options?: GenerationOptions): Promise<string> {
+    this.initialize();
+
     try {
       log("[Gemini Pro] Generating...", "gemini");
-      const result = await this.proModel.generateContent({
+      const result = await this.proModel!.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: options?.temperature ?? 0.7,
@@ -97,11 +114,13 @@ export class GeminiService {
    * Returns recent, relevant search results
    */
   async searchGrounded(query: string): Promise<SearchResult[]> {
+    this.initialize();
+
     try {
       log(`[Gemini Search] Query: ${query}`, "gemini");
 
       // Use Gemini with Google Search grounding
-      const result = await this.flashModel.generateContent({
+      const result = await this.flashModel!.generateContent({
         contents: [
           {
             role: "user",
@@ -161,8 +180,10 @@ Requirements:
    * Returns 768-dimensional vector for semantic search
    */
   async embed(text: string): Promise<number[]> {
+    this.initialize();
+
     try {
-      const embeddingModel = this.genAI.getGenerativeModel({
+      const embeddingModel = this.genAI!.getGenerativeModel({
         model: "text-embedding-004",
       });
 
