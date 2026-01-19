@@ -36,6 +36,16 @@ export async function registerRoutes(
     }
   });
 
+  // Delete all leads (must be before :id route to match correctly)
+  app.delete("/api/leads", async (req, res) => {
+    try {
+      const count = await storage.deleteAllLeads();
+      res.status(200).json({ success: true, message: `Deleted ${count} leads`, count });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete leads" });
+    }
+  });
+
   // Delete a lead
   app.delete("/api/leads/:id", async (req, res) => {
     try {
@@ -44,16 +54,6 @@ export async function registerRoutes(
       res.status(200).json({ success: true, message: "Lead deleted" });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete lead" });
-    }
-  });
-
-  // Delete all leads
-  app.delete("/api/leads", async (req, res) => {
-    try {
-      const count = await storage.deleteAllLeads();
-      res.status(200).json({ success: true, message: `Deleted ${count} leads`, count });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete leads" });
     }
   });
 
