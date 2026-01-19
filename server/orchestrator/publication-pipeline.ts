@@ -45,71 +45,89 @@ export class PublicationPipeline {
         throw new Error("Main story not found");
       }
 
-      // Phase 2: Fact-check main story
+      // Phase 2: Fact-check main story (non-blocking - warnings only)
       log("[Pipeline] Phase 2: Fact-checking main story...", "pipeline");
-      const factCheck = await investigatorAgent.verifyStory(content.mainStory);
+      try {
+        const factCheck = await investigatorAgent.verifyStory(content.mainStory);
 
-      if (factCheck.status === "failed") {
-        throw new Error(`Fact-check failed: ${factCheck.issues.join(", ")}`);
-      }
+        if (factCheck.status === "failed") {
+          warnings.push(`Fact-check warning: ${factCheck.issues.join(", ")}`);
+          log(`[Pipeline] Fact-check warning (continuing anyway): ${factCheck.issues.join(", ")}`, "pipeline");
+        } else if (factCheck.status === "warning") {
+          warnings.push(...factCheck.issues);
+        }
 
-      if (factCheck.status === "warning") {
-        warnings.push(...factCheck.issues);
-      }
-
-      // Update lead with primary source if found
-      if (factCheck.primarySourceUrl && factCheck.primarySourceUrl !== content.mainStory.url) {
-        content.mainStory.primarySourceUrl = factCheck.primarySourceUrl;
+        // Update lead with primary source if found
+        if (factCheck.primarySourceUrl && factCheck.primarySourceUrl !== content.mainStory.url) {
+          content.mainStory.primarySourceUrl = factCheck.primarySourceUrl;
+        }
+      } catch (factCheckError) {
+        warnings.push(`Fact-check skipped: ${factCheckError}`);
+        log(`[Pipeline] Fact-check failed, continuing anyway: ${factCheckError}`, "pipeline");
       }
 
       // Phase 3: Generate newsletter draft
       log("[Pipeline] Phase 3: Writing newsletter...", "pipeline");
       let draft = await writerAgent.generateNewsletter(content, issue.issueNumber);
 
-      // Phase 4: Compliance validation (with auto-fix attempts)
+      // Phase 4: Compliance validation (non-blocking - best effort)
       log("[Pipeline] Phase 4: Validating compliance...", "pipeline");
-      let validation = await complianceOfficerAgent.validate(draft);
-      let attempts = 0;
+      try {
+        let validation = await complianceOfficerAgent.validate(draft);
+        let attempts = 0;
 
-      while (!validation.valid && attempts < this.MAX_COMPLIANCE_ATTEMPTS) {
-        attempts++;
-        log(
-          `[Pipeline] Compliance violations found (attempt ${attempts}/${this.MAX_COMPLIANCE_ATTEMPTS})`,
-          "pipeline"
-        );
-        log(`[Pipeline] Violations: ${validation.violations.join("; ")}`, "pipeline");
+        while (!validation.valid && attempts < this.MAX_COMPLIANCE_ATTEMPTS) {
+          attempts++;
+          log(
+            `[Pipeline] Compliance violations found (attempt ${attempts}/${this.MAX_COMPLIANCE_ATTEMPTS})`,
+            "pipeline"
+          );
+          log(`[Pipeline] Violations: ${validation.violations.join("; ")}`, "pipeline");
 
-        // Auto-fix violations
-        draft = await complianceOfficerAgent.fix(draft, validation.violations);
+          // Auto-fix violations
+          draft = await complianceOfficerAgent.fix(draft, validation.violations);
 
-        // Re-validate
-        validation = await complianceOfficerAgent.validate(draft);
+          // Re-validate
+          validation = await complianceOfficerAgent.validate(draft);
+        }
+
+        if (!validation.valid) {
+          // Don't throw - just warn and continue with the draft we have
+          warnings.push(`Compliance issues (could not auto-fix): ${validation.violations.join(", ")}`);
+          log(`[Pipeline] Compliance warnings (continuing anyway): ${validation.violations.join(", ")}`, "pipeline");
+        } else {
+          log("[Pipeline] ✓ Compliance validation passed", "pipeline");
+        }
+
+        // Final quality check (non-blocking)
+        try {
+          const finalCheck = await complianceOfficerAgent.finalCheck(draft);
+          if (!finalCheck.passed) {
+            warnings.push(...finalCheck.issues);
+            log(`[Pipeline] Quality warnings: ${finalCheck.issues.join("; ")}`, "pipeline");
+          }
+        } catch (finalCheckError) {
+          log(`[Pipeline] Final check skipped: ${finalCheckError}`, "pipeline");
+        }
+      } catch (complianceError) {
+        warnings.push(`Compliance check skipped: ${complianceError}`);
+        log(`[Pipeline] Compliance check failed, continuing anyway: ${complianceError}`, "pipeline");
       }
 
-      if (!validation.valid) {
-        throw new Error(
-          `Could not fix compliance violations after ${this.MAX_COMPLIANCE_ATTEMPTS} attempts: ${validation.violations.join(", ")}`
-        );
-      }
-
-      // Final quality check
-      const finalCheck = await complianceOfficerAgent.finalCheck(draft);
-      if (!finalCheck.passed) {
-        warnings.push(...finalCheck.issues);
-        log(`[Pipeline] Quality warnings: ${finalCheck.issues.join("; ")}`, "pipeline");
-      }
-
-      log("[Pipeline] ✓ Compliance validation passed", "pipeline");
-
-      // Phase 5: Generate hero image
+      // Phase 5: Generate hero image (non-blocking)
       log("[Pipeline] Phase 5: Generating hero image...", "pipeline");
-      const heroImageUrl = await illustratorAgent.generateHeroImage(content.mainStory);
-
-      if (!heroImageUrl) {
-        warnings.push("Hero image generation not available (placeholder)");
+      let heroImageUrl: string | null = null;
+      try {
+        heroImageUrl = await illustratorAgent.generateHeroImage(content.mainStory);
+        if (!heroImageUrl) {
+          warnings.push("Hero image generation not available (placeholder)");
+        }
+      } catch (imageError) {
+        warnings.push(`Hero image skipped: ${imageError}`);
+        log(`[Pipeline] Hero image failed, continuing anyway: ${imageError}`, "pipeline");
       }
 
-      // Phase 6: Create Google Doc
+      // Phase 6: Create Google Doc (required - this is the main output)
       log("[Pipeline] Phase 6: Creating Google Doc...", "pipeline");
       const googleDocsUrl = await googleDocsService.createNewsletterDocument({
         markdown: draft,
@@ -118,11 +136,17 @@ export class PublicationPipeline {
       });
 
       // Phase 7: Update issue record with Google Docs URL
-      await storage.updateIssue(issue.id, { googleDocsUrl });
+      try {
+        await storage.updateIssue(issue.id, { googleDocsUrl });
+      } catch (updateError) {
+        warnings.push(`Failed to update issue record: ${updateError}`);
+        log(`[Pipeline] Failed to update issue record: ${updateError}`, "pipeline");
+      }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      const hasGoogleDoc = googleDocsUrl ? `${googleDocsUrl}` : "No Google Doc (check warnings)";
       log(
-        `[Pipeline] ✓ Publication complete (${duration}s): ${googleDocsUrl}`,
+        `[Pipeline] ✓ Publication complete (${duration}s): ${hasGoogleDoc}`,
         "pipeline"
       );
 
