@@ -42,14 +42,14 @@ export class GeminiService {
 
     this.genAI = new GoogleGenerativeAI(apiKey);
 
-    // Gemini 2.0 Flash for fast operations (research, ranking, quick decisions)
+    // Gemini 3.0 Flash for all operations
     this.flashModel = this.genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-3.0-flash",
     });
 
-    // Gemini 1.5 Pro for complex operations (writing, fact-checking)
+    // Gemini 3.0 Flash for complex operations too
     this.proModel = this.genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
+      model: "gemini-3.0-flash",
     });
 
     log("[Gemini] Service initialized successfully", "gemini");
