@@ -61,11 +61,20 @@ async function testGoogleDocs() {
 
     // TEST 2: Create via Drive API (Alternative Method)
     log("\n--- TEST 2: Creating Doc via Google Drive API ---");
+    
+    const folderId = process.env.GOOGLE_DOCS_FOLDER_ID;
+    if (folderId) {
+        log(`Using Target Folder ID: ${folderId}`);
+    } else {
+        log("[WARNING] No GOOGLE_DOCS_FOLDER_ID set. Service Accounts often fail to create files if they don't have a parent folder (0GB quota).");
+    }
+
     try {
       const driveFile = await drive.files.create({
         requestBody: {
           name: `Test Doc (Drive API) ${new Date().toISOString()}`,
           mimeType: "application/vnd.google-apps.document",
+          parents: folderId ? [folderId] : [], // IMPORTANT: Put it in the folder!
         },
       });
       log(`[SUCCESS] Created via Drive API! ID: ${driveFile.data.id}`);
@@ -75,8 +84,12 @@ async function testGoogleDocs() {
       log(`[FAILED] Drive API Create failed: ${e.message}`);
     }
 
-    // TEST 3: Original Docs API Method
+    // TEST 3: Creating Doc via Google Docs API (Original Method)
+    // Note: The Docs API create method DOES NOT support specifying a parent folder directly!
+    // It always creates in root, then moves it. This WILL FAIL for Service Accounts with 0 quota.
     log("\n--- TEST 3: Creating Doc via Google Docs API (Original Method) ---");
+    log("NOTE: This method often fails for Service Accounts because it tries to create in 'My Drive' first.");
+    
     const res = await docs.documents.create({
       requestBody: {
         title: `Test Document ${new Date().toISOString()}`,
