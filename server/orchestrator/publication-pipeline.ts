@@ -45,21 +45,25 @@ export class PublicationPipeline {
         throw new Error("Main story not found");
       }
 
-      // Phase 2: Fact-check main story
+      // Phase 2: Fact-check main story (non-blocking - warnings only)
       log("[Pipeline] Phase 2: Fact-checking main story...", "pipeline");
-      const factCheck = await investigatorAgent.verifyStory(content.mainStory);
+      try {
+        const factCheck = await investigatorAgent.verifyStory(content.mainStory);
 
-      if (factCheck.status === "failed") {
-        throw new Error(`Fact-check failed: ${factCheck.issues.join(", ")}`);
-      }
+        if (factCheck.status === "failed") {
+          warnings.push(`Fact-check warning: ${factCheck.issues.join(", ")}`);
+          log(`[Pipeline] Fact-check warning (continuing anyway): ${factCheck.issues.join(", ")}`, "pipeline");
+        } else if (factCheck.status === "warning") {
+          warnings.push(...factCheck.issues);
+        }
 
-      if (factCheck.status === "warning") {
-        warnings.push(...factCheck.issues);
-      }
-
-      // Update lead with primary source if found
-      if (factCheck.primarySourceUrl && factCheck.primarySourceUrl !== content.mainStory.url) {
-        content.mainStory.primarySourceUrl = factCheck.primarySourceUrl;
+        // Update lead with primary source if found
+        if (factCheck.primarySourceUrl && factCheck.primarySourceUrl !== content.mainStory.url) {
+          content.mainStory.primarySourceUrl = factCheck.primarySourceUrl;
+        }
+      } catch (factCheckError) {
+        warnings.push(`Fact-check skipped: ${factCheckError}`);
+        log(`[Pipeline] Fact-check failed, continuing anyway: ${factCheckError}`, "pipeline");
       }
 
       // Phase 3: Generate newsletter draft
