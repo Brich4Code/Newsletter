@@ -41,6 +41,7 @@ export class VectorSearchService {
 
       // 2. Generate embedding for title
       const embedding = await geminiService.embed(title);
+      const vectorString = `[${embedding.join(",")}]`;
 
       // 3. Semantic search with cosine similarity
       // Using pgvector extension: 1 - (embedding <=> query) = similarity
@@ -48,10 +49,10 @@ export class VectorSearchService {
         SELECT
           url,
           title,
-          1 - (embedding <=> ${sql`[${embedding.join(",")}]`}::vector) as similarity
+          1 - (embedding <=> ${vectorString}::vector) as similarity
         FROM newsletter_history
         WHERE embedding IS NOT NULL
-          AND 1 - (embedding <=> ${sql`[${embedding.join(",")}]`}::vector) > ${this.SIMILARITY_THRESHOLD}
+          AND 1 - (embedding <=> ${vectorString}::vector) > ${this.SIMILARITY_THRESHOLD}
         ORDER BY similarity DESC
         LIMIT 1
       `);
@@ -85,11 +86,12 @@ export class VectorSearchService {
   async addToHistory(url: string, title: string): Promise<void> {
     try {
       const embedding = await geminiService.embed(title);
+      const vectorString = `[${embedding.join(",")}]`;
 
       await db.insert(newsletterHistory).values({
         url,
         title,
-        embedding: sql`[${embedding.join(",")}]::vector`,
+        embedding: sql`${vectorString}::vector`,
       });
 
       log(`[VectorSearch] Added to history: ${title}`, "vector");
@@ -110,12 +112,13 @@ export class VectorSearchService {
   }>> {
     try {
       const embedding = await geminiService.embed(title);
+      const vectorString = `[${embedding.join(",")}]`;
 
       const results = await db.execute(sql`
         SELECT
           url,
           title,
-          1 - (embedding <=> ${sql`[${embedding.join(",")}]`}::vector) as similarity
+          1 - (embedding <=> ${vectorString}::vector) as similarity
         FROM newsletter_history
         WHERE embedding IS NOT NULL
         ORDER BY similarity DESC
