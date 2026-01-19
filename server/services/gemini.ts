@@ -111,7 +111,7 @@ export class GeminiService {
 
   /**
    * Search the web using Gemini's grounding feature
-   * Returns recent, relevant search results
+   * Returns recent, relevant search results with REAL URLs
    */
   async searchGrounded(query: string): Promise<SearchResult[]> {
     this.initialize();
@@ -126,22 +126,14 @@ export class GeminiService {
             role: "user",
             parts: [
               {
-                text: `Search for: ${query}
+                text: `Search for recent news about: ${query}
 
-Return results as JSON array with this exact structure:
-[
-  {
-    "title": "Article title",
-    "url": "https://example.com/article",
-    "snippet": "Brief summary of the article"
-  }
-]
+For each result you find, provide:
+1. The exact article title
+2. A 1-2 sentence summary of the article content
+3. The source website name
 
-Requirements:
-- Return 5-10 most relevant results
-- Only include articles from the last 7 days
-- Prefer authoritative AI news sources
-- Include full URLs without tracking parameters`,
+Focus on articles from the last 3-4 days only.`,
               },
             ],
           },
@@ -157,17 +149,40 @@ Requirements:
       });
 
       const response = result.response;
-      const text = response.text();
+      const candidates = response.candidates;
 
-      // Extract JSON from response
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        log("[Gemini Search] No valid JSON found in response", "gemini");
+      if (!candidates || candidates.length === 0) {
+        log("[Gemini Search] No candidates in response", "gemini");
         return [];
       }
 
-      const results: SearchResult[] = JSON.parse(jsonMatch[0]);
-      log(`[Gemini Search] Found ${results.length} results`, "gemini");
+      // Extract URLs from grounding metadata
+      const groundingMetadata = candidates[0].groundingMetadata;
+      const results: SearchResult[] = [];
+
+      if (groundingMetadata?.groundingChunks) {
+        for (const chunk of groundingMetadata.groundingChunks) {
+          if (chunk.web?.uri && chunk.web?.title) {
+            // Skip Google's redirect URLs
+            if (chunk.web.uri.includes('vertexaisearch.cloud.google.com')) {
+              continue;
+            }
+
+            results.push({
+              title: chunk.web.title,
+              url: chunk.web.uri,
+              snippet: chunk.web.title, // Will be enhanced by scoring step
+            });
+          }
+        }
+      }
+
+      // If no grounding chunks, try to extract from search entry point
+      if (results.length === 0 && groundingMetadata?.searchEntryPoint?.renderedContent) {
+        log("[Gemini Search] No direct URLs in grounding chunks", "gemini");
+      }
+
+      log(`[Gemini Search] Found ${results.length} results with real URLs`, "gemini");
       return results;
     } catch (error) {
       log(`[Gemini Search] Error: ${error}`, "gemini");

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, publishIssue, startResearch } from "@/lib/api";
+import { fetchLeads, fetchChallenges, publishIssue, startResearch, deleteLead } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,34 @@ export default function EditorialDesk() {
       });
     },
   });
+
+  // Delete lead mutation
+  const deleteLeadMutation = useMutation({
+    mutationFn: deleteLead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({
+        title: "Lead Deleted",
+        description: "The story has been removed from your list.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Couldn't delete the lead. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteLead = (lead: Lead) => {
+    // Remove from selections if selected
+    if (selectedMain?.id === lead.id) setSelectedMain(null);
+    if (selectedSecondary?.id === lead.id) setSelectedSecondary(null);
+    setSelectedLinks(prev => prev.filter(l => l.id !== lead.id));
+    // Delete from database
+    deleteLeadMutation.mutate(lead.id);
+  };
 
   const handlePublish = () => {
     if (!selectedMain) {
@@ -244,31 +273,39 @@ export default function EditorialDesk() {
                     </p>
 
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
                         onClick={() => assignMain(lead)}
                         disabled={selectedMain?.id === lead.id}
                       >
                         Main
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
                         onClick={() => assignSecondary(lead)}
                         disabled={selectedSecondary?.id === lead.id}
                       >
                         Secondary
                       </Button>
-                       <Button 
-                        variant="ghost" 
-                        size="sm" 
+                       <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
                         onClick={() => toggleLink(lead)}
                       >
                         {selectedLinks.find(l => l.id === lead.id) ? "Remove" : "Link"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => handleDeleteLead(lead)}
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
 
