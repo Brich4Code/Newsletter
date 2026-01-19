@@ -47,6 +47,16 @@ export async function registerRoutes(
     }
   });
 
+  // Delete all leads
+  app.delete("/api/leads", async (req, res) => {
+    try {
+      const count = await storage.deleteAllLeads();
+      res.status(200).json({ success: true, message: `Deleted ${count} leads`, count });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete leads" });
+    }
+  });
+
   // Get all challenges
   app.get("/api/challenges", async (req, res) => {
     try {

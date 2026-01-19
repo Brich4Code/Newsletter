@@ -60,3 +60,15 @@ export async function deleteLead(id: string): Promise<{ success: boolean }> {
 
   return response.json();
 }
+
+export async function deleteAllLeads(): Promise<{ success: boolean; count: number }> {
+  const response = await fetch(`${API_BASE}/leads`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete all leads");
+  }
+
+  return response.json();
+}

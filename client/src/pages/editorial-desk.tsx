@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, publishIssue, startResearch, deleteLead } from "@/lib/api";
+import { fetchLeads, fetchChallenges, publishIssue, startResearch, deleteLead, deleteAllLeads } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,29 @@ export default function EditorialDesk() {
       toast({
         title: "Delete Failed",
         description: "Couldn't delete the lead. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Clear all leads mutation
+  const clearAllLeadsMutation = useMutation({
+    mutationFn: deleteAllLeads,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      // Clear all selections
+      setSelectedMain(null);
+      setSelectedSecondary(null);
+      setSelectedLinks([]);
+      toast({
+        title: "All Leads Cleared",
+        description: `Removed ${result.count} leads from the database.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Clear Failed",
+        description: "Couldn't clear leads. Please try again.",
         variant: "destructive",
       });
     },
@@ -220,6 +243,25 @@ export default function EditorialDesk() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <RefreshCw className="w-4 h-4" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => clearAllLeadsMutation.mutate()}
+                disabled={clearAllLeadsMutation.isPending || leads.length === 0}
+                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                {clearAllLeadsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 w-3 h-3 animate-spin" />
+                    Clearing...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-1 w-3 h-3" />
+                    Clear All
+                  </>
                 )}
               </Button>
               <Button
