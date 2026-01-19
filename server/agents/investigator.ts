@@ -25,12 +25,12 @@ export class InvestigatorAgent {
     };
 
     try {
-      // 1. Check if URL is live
+      // 1. Check if URL is live (non-blocking - many sites block automated requests)
       result.urlLive = await this.checkUrlLive(lead.url);
       if (!result.urlLive) {
-        result.status = "failed";
-        result.issues.push("URL is not accessible");
-        return result;
+        // Don't fail - just warn. Many sites block HEAD requests but the URL might still be valid
+        result.issues.push("URL accessibility could not be verified (site may block automated requests)");
+        log(`[Investigator] URL check failed for ${lead.url} - continuing anyway`, "agent");
       }
 
       // 2. Try to find primary source using Gemini
