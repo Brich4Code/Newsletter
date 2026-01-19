@@ -78,17 +78,38 @@ export class GoogleDocsService {
       log("[Google Docs] Creating newsletter document...", "docs");
       log(`[Google Docs] Using service account: ${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}`, "docs");
 
-      // 1. Create blank document
-      log("[Google Docs] Step 1: Creating blank document...", "docs");
-      const doc = await this.docs!.documents.create({
-        requestBody: {
-          title: `Hello Jumble - Issue #${content.issueNumber}`,
-        },
-      });
-      log("[Google Docs] Step 1: Document created successfully", "docs");
+      // 1. Create document
+      let documentId: string;
+      const folderId = process.env.GOOGLE_DOCS_FOLDER_ID;
+      const title = `Hello Jumble - Issue #${content.issueNumber}`;
 
-      const documentId = doc.data.documentId!;
-      log(`[Google Docs] Created document: ${documentId}`, "docs");
+      if (folderId) {
+         // Method A: Create DIRECTLY in the shared folder using Drive API
+         // This bypasses the Service Account's 0GB quota issue
+         log(`[Google Docs] Creating document inside folder: ${folderId}`, "docs");
+         
+         const driveFile = await this.drive.files.create({
+            requestBody: {
+              name: title,
+              mimeType: "application/vnd.google-apps.document",
+              parents: [folderId],
+            },
+         });
+         documentId = driveFile.data.id;
+         log(`[Google Docs] Created document via Drive API: ${documentId}`, "docs");
+      } else {
+         // Method B: Legacy creation in root (will fail for Service Accounts without quota)
+         log("[Google Docs] Creating blank document in root...", "docs");
+         const doc = await this.docs!.documents.create({
+            requestBody: {
+              title: title,
+            },
+         });
+         documentId = doc.data.documentId!;
+         log(`[Google Docs] Created document via Docs API: ${documentId}`, "docs");
+      }
+      
+      log("[Google Docs] Step 1: Document created successfully", "docs");
 
       // 2. Parse markdown and build formatting instructions
       const { plainText, formatting } = this.parseMarkdown(content.markdown);
@@ -131,11 +152,8 @@ export class GoogleDocsService {
         await this.shareDocument(documentId, editorEmail);
       }
 
-      // 7. Move to specific folder (if configured)
-      const folderId = process.env.GOOGLE_DOCS_FOLDER_ID;
-      if (folderId) {
-        await this.moveToFolder(documentId, folderId);
-      }
+      // 7. Move to folder - ALREADY DONE AT CREATION
+      // The document is created directly inside the target folder to avoid quota limits.
 
       const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
       log(`[Google Docs] Newsletter created: ${docUrl}`, "docs");
