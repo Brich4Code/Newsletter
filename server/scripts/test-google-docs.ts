@@ -21,6 +21,14 @@ async function testGoogleDocs() {
   }
 
   log(`Using Service Account: ${email}`);
+  
+  if (email.includes("gen-lang-client")) {
+    log("\n[WARNING] You are using a 'gen-lang-client' email.");
+    log("These accounts are often restricted by Google AI Studio.");
+    log("If you created a new 'writer-bot' account, your terminal is still seeing the OLD credentials.");
+    log("SOLUTION: Close this terminal/shell and open a new one to load the new secrets.\n");
+  }
+
   log(`Private Key Length: ${privateKey.length}`);
 
   try {
