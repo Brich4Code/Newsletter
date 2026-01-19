@@ -127,19 +127,13 @@ export class PublicationPipeline {
         log(`[Pipeline] Hero image failed, continuing anyway: ${imageError}`, "pipeline");
       }
 
-      // Phase 6: Create Google Doc
+      // Phase 6: Create Google Doc (required - this is the main output)
       log("[Pipeline] Phase 6: Creating Google Doc...", "pipeline");
-      let googleDocsUrl: string | null = null;
-      try {
-        googleDocsUrl = await googleDocsService.createNewsletterDocument({
-          markdown: draft,
-          heroImageUrl: heroImageUrl || undefined,
-          issueNumber: issue.issueNumber,
-        });
-      } catch (docsError) {
-        warnings.push(`Google Doc creation failed: ${docsError}`);
-        log(`[Pipeline] Google Doc creation failed: ${docsError}`, "pipeline");
-      }
+      const googleDocsUrl = await googleDocsService.createNewsletterDocument({
+        markdown: draft,
+        heroImageUrl: heroImageUrl || undefined,
+        issueNumber: issue.issueNumber,
+      });
 
       // Phase 7: Update issue record with Google Docs URL
       try {
