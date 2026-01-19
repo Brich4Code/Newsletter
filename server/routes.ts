@@ -39,9 +39,12 @@ export async function registerRoutes(
   // Delete all leads (must be before :id route to match correctly)
   app.delete("/api/leads", async (req, res) => {
     try {
+      console.log("[API] DELETE /api/leads called");
       const count = await storage.deleteAllLeads();
+      console.log(`[API] Deleted ${count} leads successfully`);
       res.status(200).json({ success: true, message: `Deleted ${count} leads`, count });
     } catch (error) {
+      console.error("[API] Delete all leads error:", error);
       res.status(500).json({ error: "Failed to delete leads" });
     }
   });
