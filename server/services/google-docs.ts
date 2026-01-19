@@ -46,6 +46,10 @@ export class GoogleDocsService {
       );
     }
 
+    log(`[Google Docs] Initializing with email: ${email}`, "docs");
+    log(`[Google Docs] Private key starts with: ${privateKey?.substring(0, 30)}...`, "docs");
+    log(`[Google Docs] Private key length: ${privateKey?.length}`, "docs");
+
     this.auth = new JWT({
       email,
       key: privateKey,
@@ -69,13 +73,16 @@ export class GoogleDocsService {
 
     try {
       log("[Google Docs] Creating newsletter document...", "docs");
+      log(`[Google Docs] Using service account: ${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}`, "docs");
 
       // 1. Create blank document
+      log("[Google Docs] Step 1: Creating blank document...", "docs");
       const doc = await this.docs!.documents.create({
         requestBody: {
           title: `Hello Jumble - Issue #${content.issueNumber}`,
         },
       });
+      log("[Google Docs] Step 1: Document created successfully", "docs");
 
       const documentId = doc.data.documentId!;
       log(`[Google Docs] Created document: ${documentId}`, "docs");
