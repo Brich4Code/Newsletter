@@ -28,8 +28,6 @@ export interface PublicationResult {
  * 7. Return Google Docs URL
  */
 export class PublicationPipeline {
-  private readonly MAX_COMPLIANCE_ATTEMPTS = 3;
-
   async execute(issue: Issue): Promise<PublicationResult> {
     const startTime = Date.now();
     log(`[Pipeline] ━━━ Starting Publication for Issue #${issue.issueNumber} ━━━`, "pipeline");
@@ -74,20 +72,15 @@ export class PublicationPipeline {
       log("[Pipeline] Phase 4: Validating compliance...", "pipeline");
       try {
         let validation = await complianceOfficerAgent.validate(draft);
-        let attempts = 0;
 
-        while (!validation.valid && attempts < this.MAX_COMPLIANCE_ATTEMPTS) {
-          attempts++;
-          log(
-            `[Pipeline] Compliance violations found (attempt ${attempts}/${this.MAX_COMPLIANCE_ATTEMPTS})`,
-            "pipeline"
-          );
+        if (!validation.valid) {
+          log(`[Pipeline] Compliance violations found. Attempting single auto-fix...`, "pipeline");
           log(`[Pipeline] Violations: ${validation.violations.join("; ")}`, "pipeline");
 
-          // Auto-fix violations
+          // Auto-fix violations (single attempt)
           draft = await complianceOfficerAgent.fix(draft, validation.violations);
 
-          // Re-validate
+          // Re-validate to check status (but do not retry again)
           validation = await complianceOfficerAgent.validate(draft);
         }
 
