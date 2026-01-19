@@ -23,6 +23,30 @@ export interface ScoredCandidate extends Candidate {
 export class ScoopHunterAgent {
   private readonly MIN_RELEVANCE_SCORE = 70; // Only store leads scoring 70+
 
+  // Title patterns that indicate roundup/digest articles (case insensitive)
+  private readonly ROUNDUP_PATTERNS = [
+    /\bthis week in\b/i,
+    /\bweekly (digest|roundup|recap|update|news)\b/i,
+    /\bdaily (digest|roundup|recap|news)\b/i,
+    /\bnews (roundup|digest|recap)\b/i,
+    /\b\d+ (things|stories|news|updates|trends)\b/i,  // "5 things", "10 stories"
+    /\btop \d+\b/i,  // "top 10"
+    /\bbest (of|ai tools)\b/i,
+    /\beverything you need to know\b/i,
+    /\bcomplete guide\b/i,
+    /\bai (news|update),? (january|february|march|april|may|june|july|august|september|october|november|december)\b/i,
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december) \d{1,2},? \d{4}:? ai\b/i,
+    /\blatest ai news and\b/i,
+    /\bai trends in 202\d\b/i,
+  ];
+
+  /**
+   * Check if title matches roundup patterns
+   */
+  private isRoundupByTitle(title: string): boolean {
+    return this.ROUNDUP_PATTERNS.some(pattern => pattern.test(title));
+  }
+
   async run(): Promise<void> {
     log("[ScoopHunter] Starting research cycle...", "agent");
 
@@ -68,6 +92,15 @@ export class ScoopHunterAgent {
           if (duplicateCheck.isDuplicate) {
             log(
               `[ScoopHunter] Skipping duplicate: ${result.title} (${duplicateCheck.matchType})`,
+              "agent"
+            );
+            continue;
+          }
+
+          // 2b. Quick filter: Skip obvious roundup articles by title
+          if (this.isRoundupByTitle(result.title)) {
+            log(
+              `[ScoopHunter] Skipping roundup by title: ${result.title}`,
               "agent"
             );
             continue;

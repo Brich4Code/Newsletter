@@ -48,3 +48,15 @@ export async function startResearch(): Promise<{ status: string; message: string
 
   return response.json();
 }
+
+export async function deleteLead(id: string): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE}/leads/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete lead");
+  }
+
+  return response.json();
+}

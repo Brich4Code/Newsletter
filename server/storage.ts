@@ -12,6 +12,7 @@ export interface IStorage {
   getLeadById(id: string): Promise<Lead | undefined>;
   getLeadsByIds(ids: string[]): Promise<Lead[]>;
   createLead(lead: InsertLead): Promise<Lead>;
+  deleteLead(id: string): Promise<void>;
 
   // Challenges
   getChallenges(): Promise<Challenge[]>;
@@ -44,6 +45,10 @@ export class DatabaseStorage implements IStorage {
   async getLeadsByIds(ids: string[]): Promise<Lead[]> {
     if (ids.length === 0) return [];
     return db.select().from(leads).where(eq(leads.id, ids[0])); // TODO: Fix for multiple IDs
+  }
+
+  async deleteLead(id: string): Promise<void> {
+    await db.delete(leads).where(eq(leads.id, id));
   }
 
   // Challenges

@@ -36,6 +36,17 @@ export async function registerRoutes(
     }
   });
 
+  // Delete a lead
+  app.delete("/api/leads/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteLead(id);
+      res.status(200).json({ success: true, message: "Lead deleted" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete lead" });
+    }
+  });
+
   // Get all challenges
   app.get("/api/challenges", async (req, res) => {
     try {
