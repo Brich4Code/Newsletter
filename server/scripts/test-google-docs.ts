@@ -65,6 +65,28 @@ async function testGoogleDocs() {
     const folderId = process.env.GOOGLE_DOCS_FOLDER_ID;
     if (folderId) {
         log(`Using Target Folder ID: ${folderId}`);
+        
+        // TEST 1.5: Verify Folder Access
+        log("\n--- TEST 1.5: Verifying Folder Access ---");
+        try {
+            const folder = await drive.files.get({
+                fileId: folderId,
+                fields: "id, name, capabilities"
+            });
+            log(`Found Folder: "${folder.data.name}"`);
+            log(`Can Add Children: ${folder.data.capabilities?.canAddChildren}`);
+            
+            if (!folder.data.capabilities?.canAddChildren) {
+                log("[CRITICAL WARNING] The Service Account can SEE the folder but CANNOT WRITE to it.");
+                log("Please change the sharing permission from 'Viewer' to 'Editor'.");
+            }
+        } catch (e: any) {
+            log(`[CRITICAL FAILURE] Could not access folder: ${e.message}`);
+            log("Possible causes:");
+            log("1. The Folder ID is incorrect.");
+            log("2. The folder is NOT shared with: " + email);
+            log("3. The folder is in a 'Shared Drive' and we need extra parameters.");
+        }
     } else {
         log("[WARNING] No GOOGLE_DOCS_FOLDER_ID set. Service Accounts often fail to create files if they don't have a parent folder (0GB quota).");
     }
