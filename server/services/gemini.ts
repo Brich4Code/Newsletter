@@ -42,14 +42,14 @@ export class GeminiService {
 
     this.genAI = new GoogleGenerativeAI(apiKey);
 
-    // Gemini 3.0 Flash for all operations
+    // Gemini 3 Flash Preview for all operations
     this.flashModel = this.genAI.getGenerativeModel({
-      model: "gemini-3.0-flash",
+      model: "gemini-3-flash-preview",
     });
 
-    // Gemini 3.0 Flash for complex operations too
+    // Gemini 3 Flash Preview for complex operations too
     this.proModel = this.genAI.getGenerativeModel({
-      model: "gemini-3.0-flash",
+      model: "gemini-3-flash-preview",
     });
 
     log("[Gemini] Service initialized successfully", "gemini");
