@@ -111,7 +111,7 @@ export class GeminiService {
 
   /**
    * Search the web using Gemini's grounding feature
-   * Returns recent, relevant search results with REAL URLs
+   * Returns recent, relevant search results
    */
   async searchGrounded(query: string): Promise<SearchResult[]> {
     this.initialize();
@@ -119,7 +119,7 @@ export class GeminiService {
     try {
       log(`[Gemini Search] Query: ${query}`, "gemini");
 
-      // Use Gemini with Google Search grounding
+      // Use Gemini with Google Search grounding - ask for JSON format with URLs
       const result = await this.flashModel!.generateContent({
         contents: [
           {
@@ -128,12 +128,21 @@ export class GeminiService {
               {
                 text: `Search for recent news about: ${query}
 
-For each result you find, provide:
-1. The exact article title
-2. A 1-2 sentence summary of the article content
-3. The source website name
+Return your findings as a JSON array with this exact format:
+[
+  {
+    "title": "Article headline",
+    "url": "https://actual-website.com/article-path",
+    "snippet": "1-2 sentence summary"
+  }
+]
 
-Focus on articles from the last 3-4 days only.`,
+Requirements:
+- Return 5-8 results maximum
+- Only include articles from reputable news sources
+- Include the ACTUAL article URL (not a redirect URL)
+- Focus on articles from the last 7 days
+- Return ONLY the JSON array, no other text`,
               },
             ],
           },
@@ -149,41 +158,46 @@ Focus on articles from the last 3-4 days only.`,
       });
 
       const response = result.response;
-      const candidates = response.candidates;
+      const text = response.text();
 
-      if (!candidates || candidates.length === 0) {
-        log("[Gemini Search] No candidates in response", "gemini");
-        return [];
-      }
-
-      // Extract URLs from grounding metadata
-      const groundingMetadata = candidates[0].groundingMetadata;
-      const results: SearchResult[] = [];
-
-      if (groundingMetadata?.groundingChunks) {
-        for (const chunk of groundingMetadata.groundingChunks) {
-          if (chunk.web?.uri && chunk.web?.title) {
-            // Skip Google's redirect URLs
-            if (chunk.web.uri.includes('vertexaisearch.cloud.google.com')) {
-              continue;
-            }
-
-            results.push({
-              title: chunk.web.title,
-              url: chunk.web.uri,
-              snippet: chunk.web.title, // Will be enhanced by scoring step
-            });
-          }
+      // Try to parse JSON from response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        try {
+          const results: SearchResult[] = JSON.parse(jsonMatch[0]);
+          log(`[Gemini Search] Found ${results.length} results from JSON response`, "gemini");
+          return results.filter(r => r.url && r.title && !r.url.includes('vertexaisearch.cloud.google.com'));
+        } catch (parseError) {
+          log(`[Gemini Search] JSON parse error: ${parseError}`, "gemini");
         }
       }
 
-      // If no grounding chunks, try to extract from search entry point
-      if (results.length === 0 && groundingMetadata?.searchEntryPoint?.renderedContent) {
-        log("[Gemini Search] No direct URLs in grounding chunks", "gemini");
+      // Fallback: try grounding metadata
+      const candidates = response.candidates;
+      if (candidates && candidates.length > 0) {
+        const groundingMetadata = candidates[0].groundingMetadata;
+        const results: SearchResult[] = [];
+
+        if (groundingMetadata?.groundingChunks) {
+          for (const chunk of groundingMetadata.groundingChunks) {
+            if (chunk.web?.uri && chunk.web?.title) {
+              results.push({
+                title: chunk.web.title,
+                url: chunk.web.uri,
+                snippet: chunk.web.title,
+              });
+            }
+          }
+        }
+
+        if (results.length > 0) {
+          log(`[Gemini Search] Found ${results.length} results from grounding metadata`, "gemini");
+          return results;
+        }
       }
 
-      log(`[Gemini Search] Found ${results.length} results with real URLs`, "gemini");
-      return results;
+      log("[Gemini Search] No results found", "gemini");
+      return [];
     } catch (error) {
       log(`[Gemini Search] Error: ${error}`, "gemini");
       return [];
