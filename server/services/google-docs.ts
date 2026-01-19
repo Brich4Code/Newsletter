@@ -47,7 +47,10 @@ export class GoogleDocsService {
     }
 
     log(`[Google Docs] Initializing with email: ${email}`, "docs");
-    log(`[Google Docs] Private key starts with: ${privateKey?.substring(0, 30)}...`, "docs");
+    
+    const hasHeader = privateKey?.includes("BEGIN PRIVATE KEY");
+    log(`[Google Docs] Private key has header: ${hasHeader}`, "docs");
+    log(`[Google Docs] Private key start: ${privateKey?.substring(0, 20)}...`, "docs");
     log(`[Google Docs] Private key length: ${privateKey?.length}`, "docs");
 
     this.auth = new JWT({
@@ -138,9 +141,12 @@ export class GoogleDocsService {
       log(`[Google Docs] Newsletter created: ${docUrl}`, "docs");
 
       return docUrl;
-    } catch (error) {
-      log(`[Google Docs] Error: ${error}`, "docs");
-      throw new Error(`Failed to create Google Doc: ${error}`);
+    } catch (error: any) {
+      log(`[Google Docs] Error: ${error.message}`, "docs");
+      if (error.response?.data) {
+        log(`[Google Docs] API Error Details: ${JSON.stringify(error.response.data, null, 2)}`, "docs");
+      }
+      throw new Error(`Failed to create Google Doc: ${error.message}`);
     }
   }
 
