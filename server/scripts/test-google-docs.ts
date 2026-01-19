@@ -38,8 +38,37 @@ async function testGoogleDocs() {
     log("Authentication successful!");
 
     const docs = google.docs({ version: "v1", auth });
+    const drive = google.drive({ version: "v3", auth });
 
-    log("Attempting to create a test document...");
+    // TEST 1: Check Drive Identity & Capabilities
+    log("\n--- TEST 1: Checking Drive API Access ---");
+    try {
+      const about = await drive.about.get({ fields: "user, storageQuota" });
+      log(`Connected as: ${about.data.user?.emailAddress}`);
+      log(`Name: ${about.data.user?.displayName}`);
+    } catch (e: any) {
+      log(`[FAILED] Could not access Drive API 'about': ${e.message}`);
+      // Proceeding anyway
+    }
+
+    // TEST 2: Create via Drive API (Alternative Method)
+    log("\n--- TEST 2: Creating Doc via Google Drive API ---");
+    try {
+      const driveFile = await drive.files.create({
+        requestBody: {
+          name: `Test Doc (Drive API) ${new Date().toISOString()}`,
+          mimeType: "application/vnd.google-apps.document",
+        },
+      });
+      log(`[SUCCESS] Created via Drive API! ID: ${driveFile.data.id}`);
+      log(`URL: https://docs.google.com/document/d/${driveFile.data.id}/edit`);
+      return; // If this works, we are good!
+    } catch (e: any) {
+      log(`[FAILED] Drive API Create failed: ${e.message}`);
+    }
+
+    // TEST 3: Original Docs API Method
+    log("\n--- TEST 3: Creating Doc via Google Docs API (Original Method) ---");
     const res = await docs.documents.create({
       requestBody: {
         title: `Test Document ${new Date().toISOString()}`,
@@ -52,24 +81,20 @@ async function testGoogleDocs() {
     log(`URL: https://docs.google.com/document/d/${res.data.documentId}/edit`);
 
   } catch (error: any) {
-    log("FAILED to create document.");
+    log("\n[FINAL FAILURE SUMMARY]");
     log(`Error Message: ${error.message}`);
     
     if (error.response) {
         log(`Status: ${error.response.status}`);
-        log("Full API Error:");
-        console.log(JSON.stringify(error.response.data, null, 2));
-    } else {
-        console.log(error);
+        // log("Full API Error:");
+        // console.log(JSON.stringify(error.response.data, null, 2));
     }
 
     if (error.message.includes("The caller does not have permission")) {
-        log("\n--- DIAGNOSIS ---");
-        log("The 'The caller does not have permission' error usually means:");
-        log("1. The 'Google Docs API' is NOT enabled in the Google Cloud Console for this project.");
-        log("2. The 'Google Drive API' is NOT enabled.");
-        log("3. You are using a restricted 'gen-lang-client' project (from AI Studio).");
-        log("   Ensure you created a standard project in https://console.cloud.google.com");
+        log("\n--- DIAGNOSIS HINTS ---");
+        log("1. Double check you are in project 'newsletter-app-production' in Cloud Console.");
+        log("2. Ensure 'Google Drive API' is ENABLED (sometimes it's missed).");
+        log("3. If you just enabled the APIs, wait 5 minutes and try again.");
     }
   }
 }
