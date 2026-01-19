@@ -53,6 +53,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAllLeads(): Promise<number> {
+    // First, clear foreign key references in issues table
+    await db.update(issues).set({
+      mainStoryId: null,
+      secondaryStoryId: null,
+      quickLinkIds: []
+    });
+    // Then delete all leads
     const result = await db.delete(leads).returning({ id: leads.id });
     return result.length;
   }
