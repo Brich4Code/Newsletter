@@ -4,7 +4,7 @@ import {
   type Challenge, type InsertChallenge, challenges,
   type Issue, type InsertIssue, issues
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Leads
@@ -53,15 +53,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAllLeads(): Promise<number> {
-    // First, clear foreign key references in issues table
-    await db.update(issues).set({
-      mainStoryId: null,
-      secondaryStoryId: null,
-      quickLinkIds: []
-    });
-    // Then delete all leads
-    const result = await db.delete(leads).returning({ id: leads.id });
-    return result.length;
+    // Use raw SQL to clear FK references and delete leads
+    await db.execute(sql`UPDATE issues SET main_story_id = NULL, secondary_story_id = NULL, quick_link_ids = ARRAY[]::text[]`);
+    const result = await db.execute(sql`DELETE FROM leads RETURNING id`);
+    return result.rowCount ?? 0;
   }
 
   // Challenges
