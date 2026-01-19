@@ -27,13 +27,29 @@ export class ScoopHunterAgent {
     log("[ScoopHunter] Starting research cycle...", "agent");
 
     try {
-      // 1. Search for AI news across multiple angles
+      // Get current date for recent news searches
+      const today = new Date();
+      const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+      // 1. Search for specific AI stories (last 3-4 days) matching Hello Jumble's style
       const searchQueries = [
-        "latest AI breakthroughs and announcements this week",
-        "new AI models and research papers released",
-        "AI startup funding and company news",
-        "AI product launches and updates",
-        "AI regulation and policy news",
+        // Major company news - OpenAI, Anthropic, Google, Meta, Apple, xAI
+        `OpenAI news January 2026`,
+        `Anthropic Claude news January 2026`,
+        `Google Gemini news January 2026`,
+        `Meta AI news January 2026`,
+        // Product launches and updates
+        `ChatGPT update OR new feature January 2026`,
+        `AI product launch this week 2026`,
+        // Drama, conflict, business moves
+        `AI company lawsuit OR controversy OR drama 2026`,
+        `Sam Altman OR Elon Musk AI news 2026`,
+        // Consumer and cultural impact
+        `AI affecting jobs OR social media OR dating apps 2026`,
+        // Policy and regulation
+        `AI regulation OR government policy 2026`,
+        // Hardware and devices
+        `AI device OR AI hardware announcement 2026`,
       ];
 
       const allCandidates: Candidate[] = [];
@@ -112,33 +128,66 @@ export class ScoopHunterAgent {
 
     for (const candidate of candidates) {
       try {
-        const prompt = `Analyze this AI news story for the Hello Jumble newsletter:
+        const prompt = `Analyze this AI news story for Hello Jumble, a newsletter that writes SINGLE-TOPIC stories with narrative headlines.
 
 Title: ${candidate.title}
 Snippet: ${candidate.snippet}
 Source: ${candidate.source}
 
-Tasks:
-1. Score the relevance for a newsletter about AI/ML news (0-100):
-   - Recent, newsworthy AI developments: High score
-   - Minor updates or old news: Low score
-   - Technical depth and significance: Bonus points
-   - Source credibility: Consider reputation
+HELLO JUMBLE HEADLINE EXAMPLES (this is their actual style):
+- "Sam Altman Gets Upset When Asked About Valuation" (drama/personality)
+- "Apple Finally Admits It Needs Help" (narrative tension)
+- "AI Slop Is Rapidly Taking Over YouTube Feeds" (cultural impact)
+- "xAI Takes Apple and OpenAI to Court for Unlawful Collusion" (conflict/legal)
+- "Gemini 3 Deep Think Finally Released" (specific product)
+- "China Sets the World's Strictest Chatbot Regulations" (policy)
+- "Tinder Uses Your Photos to Make Better Matches" (consumer app)
+- "NASA Spots Potential Signs of Martian Life With the Help of AI" (real-world application)
 
-2. Write a 1-2 sentence summary suitable for a newsletter lead selection interface.
+SCORING CRITERIA (0-100):
+HIGH SCORE (80-100):
+- Single specific story with narrative potential
+- Major company: OpenAI, Anthropic, Google, Meta, Apple, xAI, Amazon
+- Drama, conflict, or human interest angle
+- Consumer/cultural impact
+- Breaking product release or major update
+
+LOW SCORE (0-40):
+- Roundup articles ("5 AI tools...", "This week in AI...", "AI news roundup")
+- Generic listicles, "best of", or comparison articles
+- Old news (more than 1 week old)
+- Technical tutorials or how-to content
+- Press releases without news value
+
+AUTOMATIC REJECT (score 0):
+- Articles that cover MULTIPLE unrelated AI stories
+- "Weekly digest" or "news roundup" format
+
+Write a 1-2 sentence summary focusing on what makes this story newsworthy.
 
 Return JSON:
 {
   "relevanceScore": number (0-100),
   "summary": "string (1-2 sentences)",
-  "reasoning": "Brief explanation of score"
+  "reasoning": "Brief explanation",
+  "isRoundup": boolean
 }`;
 
         const response = await geminiService.generateJSON<{
           relevanceScore: number;
           summary: string;
           reasoning: string;
+          isRoundup: boolean;
         }>(prompt);
+
+        // Skip roundup articles entirely
+        if (response.isRoundup) {
+          log(
+            `[ScoopHunter] Skipping roundup: "${candidate.title}"`,
+            "agent"
+          );
+          continue;
+        }
 
         scored.push({
           ...candidate,
