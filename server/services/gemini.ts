@@ -69,7 +69,8 @@ export class GeminiService {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: options?.temperature ?? 0.7,
-          maxOutputTokens: options?.maxTokens ?? 2048,
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxTokens ?? 8192,
           topP: options?.topP,
           topK: options?.topK,
         },
@@ -302,6 +303,7 @@ Requirements:
       return JSON.parse(jsonString);
     } catch (e) {
       log(`[Gemini] Manual extraction failed to parse: ${e}`, "gemini");
+      log(`[Gemini] Failed payload snippet: ${jsonString.slice(0, 100)}...${jsonString.slice(-100)}`, "gemini");
       throw new Error(`Failed to parse extracted JSON: ${e}`);
     }
   }
