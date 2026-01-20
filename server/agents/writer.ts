@@ -252,16 +252,22 @@ ${NewsletterStyleGuide.rules}
 Write the COMPLETE newsletter following the structure and rules defined in the STYLE GUIDE section above.
 Use the research notes to craft engaging, fact-checked content.
 
-# REQUIRED COMPLETE STRUCTURE - YOU MUST INCLUDE ALL OF THESE SECTIONS:
+🚨 CRITICAL: This is a LONG newsletter (~2500+ words). You MUST generate ALL sections below. DO NOT stop after the main story or secondary story. KEEP GENERATING until you reach the Sources section at the very end.
+
+# REQUIRED COMPLETE STRUCTURE - YOU MUST INCLUDE ALL OF THESE SECTIONS IN ORDER:
 
 **Section 1: Subject Line** (40-60 characters)
 **Section 2: Preview Text** (Tease secondary story + one Weekly Scoop item)
 **Section 3: Newsletter Title** (≤60 characters, fresh angle on main story)
 **Section 4: Welcome To This Week's Edition Of Jumble** (45-70 words, end with ⬇️)
 **Section 5: In this newsletter:** (Exactly 5 bullets with emojis)
-**Section 6: Main Story** (H1 with emoji, ~400 words, 2-3 H2 subsections with emojis)
+**Section 6: Main Story**
+  - MUST be a separate H1 header with emoji
+  - ~400 words with 2-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Main Story URL bank throughout the story
-**Section 7: Secondary Story** (H1 with emoji, ~350 words, 1-3 H2 subsections with emojis)
+**Section 7: Secondary Story**
+  - MUST be a separate H1 header with emoji (NOT nested under main story)
+  - ~350 words with 1-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Secondary Story URL bank throughout the story
 **Section 8: Weekly Scoop 📢** (Exactly 6 headlines, each with emoji and unique link)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
@@ -269,7 +275,12 @@ Use the research notes to craft engaging, fact-checked content.
 **Section 10: Wrap Up** (Bold 1-2 lines inviting replies)
 **Section 11: Sources** - List all URLs used, grouped by section
 
-⚠️ CRITICAL: You MUST complete ALL 11 sections above. Do NOT stop early or skip sections. The newsletter is NOT complete without all sections.
+⚠️ CRITICAL COMPLETION REQUIREMENTS:
+1. You MUST complete ALL 11 sections above - no exceptions
+2. Do NOT stop early or skip sections
+3. The Main Story and Secondary Story MUST have separate H1 headers
+4. The newsletter is NOT complete until you write the Sources section
+5. Expected total length: 2500+ words
 
 # 🚨 CRITICAL URL EMBEDDING RULES - READ CAREFULLY:
 
@@ -325,19 +336,43 @@ After the Wrap Up section, add:
 
 Ensure all word counts, formatting rules, and link standards are strictly followed.
 
+🚨 BEFORE YOU FINISH - COMPLETION CHECKLIST:
+
+Before ending your output, verify you have written ALL of these sections:
+✓ Subject Line
+✓ Preview Text
+✓ Newsletter Title
+✓ Welcome message
+✓ "In this newsletter:" bullets
+✓ Main Story (separate H1, ~400 words, with 5-7 embedded links)
+✓ Secondary Story (separate H1, ~350 words, with 5-7 embedded links)
+✓ Weekly Scoop (6 headlines with 6 unique embedded links)
+✓ Weekly Challenge (150-200 words)
+✓ Wrap Up
+✓ Sources section
+
+If ANY section is missing, you have NOT completed the newsletter. Keep writing until ALL sections are present.
+
 CRITICAL OUTPUT INSTRUCTIONS:
 1. Do NOT include any internal thought process, reasoning, or conversational text.
 2. Output ONLY the final newsletter content.
-3. Output the COMPLETE newsletter with ALL 10 sections listed above.
-4. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
+3. Output the COMPLETE newsletter with ALL 11 sections listed above.
+4. Do NOT stop generating until you have written the Sources section at the very end.
+5. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
 
     let draft = await geminiService.generateWithPro(writePrompt, {
-      temperature: 0.5, // Lower temp to reduce URL hallucination (was 0.8)
-      maxTokens: 51200, // Increased to 50K with condensed input (was 25.6K)
+      temperature: 0.6, // Slightly higher to encourage fuller output (was 0.5)
+      maxTokens: 65536, // Max supported by Gemini 3 Flash Preview (was 51200)
     });
 
     const rawDraftLength = draft.length;
-    log(`[Writer] Raw draft from Gemini: ${rawDraftLength} chars (${draft.split(/\s+/).length} words)`, "agent");
+    const rawWordCount = draft.split(/\s+/).length;
+    log(`[Writer] Raw draft from Gemini: ${rawDraftLength} chars (${rawWordCount} words)`, "agent");
+
+    // Check if draft seems incomplete (should be at least 2000 words for full newsletter)
+    if (rawWordCount < 2000) {
+      log(`[Writer] ⚠️ WARNING: Draft seems short (${rawWordCount} words, expected ~2500+). Model may have stopped early.`, "agent");
+    }
 
     // Extract markdown from code block if present
     const match = draft.match(/```markdown\n([\s\S]*?)\n?```/);

@@ -91,12 +91,14 @@ export class GeminiService {
     this.initialize();
 
     try {
-      log(`[Gemini Pro] Generating${options?.useGroundedSearch ? ' with Google Search grounding' : ''}...`, "gemini");
+      const maxTokens = options?.maxTokens ?? 8192;
+      log(`[Gemini Pro] Generating${options?.useGroundedSearch ? ' with Google Search grounding' : ''} (maxOutputTokens: ${maxTokens})...`, "gemini");
+
       const result = await this.proModel!.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: options?.temperature ?? 0.7,
-          maxOutputTokens: options?.maxTokens ?? 8192,
+          maxOutputTokens: maxTokens,
           topP: options?.topP,
           topK: options?.topK,
         },
@@ -110,7 +112,24 @@ export class GeminiService {
       });
 
       const response = result.response;
-      return response.text();
+      const text = response.text();
+
+      // Check for finish reason to diagnose early stops
+      const candidates = response.candidates;
+      if (candidates && candidates.length > 0) {
+        const finishReason = candidates[0].finishReason;
+        log(`[Gemini Pro] Finish reason: ${finishReason}`, "gemini");
+
+        if (finishReason === 'MAX_TOKENS') {
+          log(`[Gemini Pro] ⚠️ Output was truncated due to max token limit`, "gemini");
+        } else if (finishReason === 'SAFETY') {
+          log(`[Gemini Pro] ⚠️ Output was blocked by safety filters`, "gemini");
+        } else if (finishReason !== 'STOP') {
+          log(`[Gemini Pro] ⚠️ Unexpected finish reason: ${finishReason}`, "gemini");
+        }
+      }
+
+      return text;
     } catch (error) {
       log(`[Gemini Pro] Error: ${error}`, "gemini");
       throw new Error(`Gemini Pro generation failed: ${error}`);
