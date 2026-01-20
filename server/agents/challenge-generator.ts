@@ -59,6 +59,7 @@ Return as JSON array:
       log(`[ChallengeGenerator] Generated ${challenges.length} new challenges`, "agent");
     } catch (error) {
       log(`[ChallengeGenerator] Error: ${error}`, "agent");
+      throw error; // Re-throw to allow caller to handle failure
     }
   }
 }
