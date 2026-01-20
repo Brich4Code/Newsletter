@@ -263,27 +263,47 @@ Requirements:
   async generateJSON<T>(prompt: string, options?: GenerationOptions): Promise<T> {
     const response = await this.generateWithFlash(prompt, options);
 
-    // Extract JSON from markdown code blocks if present
-    const jsonMatch = response.match(/```json\n?([\s\S]*?)\n?```/) ||
-      response.match(/```\n?([\s\S]*?)\n?```/) ||
-      response.match(/(\[\s*[\s\S]*\s*\])/) ||
-      response.match(/(\{\s*[\s\S]*\s*\})/);
+    // First try standard regex (often cleaner)
+    let jsonMatch = response.match(/```json\n?([\s\S]*?)\n?```/) ||
+      response.match(/```\n?([\s\S]*?)\n?```/);
 
-    if (!jsonMatch) {
-      throw new Error("No valid JSON found in response");
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[1].trim());
+      } catch (e) {
+        log(`[Gemini] Regex match failed to parse: ${e}`, "gemini");
+        // Fallthrough to manual extraction
+      }
     }
 
-    // specific fix for "Unexpected non-whitespace character after JSON"
-    // Sometimes models add text after the JSON even without markdown blocks
-    // We try to parse the matched group. 
-    // If the match was greedy and captured extra text, we might need to be smarter.
-    // Ideally the regexes above should capture the JSON structure.
-    // The simple array/object matchers above are greedy, so we rely on JSON.parse to be strict.
-    // However, if we grabbed the *whole* string but it has trailing text, we fail.
+    // Fallback: Manual extraction of { ... } or [ ... ]
+    // This is robust against extra text before/after
+    const firstBrace = response.indexOf('{');
+    const lastBrace = response.lastIndexOf('}');
+    const firstBracket = response.indexOf('[');
+    const lastBracket = response.lastIndexOf(']');
 
-    // Let's try to clean the string before parsing
-    const jsonString = (jsonMatch[1] || jsonMatch[0]).trim();
-    return JSON.parse(jsonString);
+    let jsonString = '';
+
+    // Determine if it's likely an array or object based on which comes first
+    // Default to whichever valid pair encloses the most content or appears first
+    const hasObject = firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace;
+    const hasArray = firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket;
+
+    if (hasArray && (!hasObject || firstBracket < firstBrace)) {
+      jsonString = response.substring(firstBracket, lastBracket + 1);
+    } else if (hasObject) {
+      jsonString = response.substring(firstBrace, lastBrace + 1);
+    } else {
+      throw new Error("No valid JSON structure ({...} or [...]) found in response");
+    }
+
+    try {
+      return JSON.parse(jsonString);
+    } catch (e) {
+      log(`[Gemini] Manual extraction failed to parse: ${e}`, "gemini");
+      throw new Error(`Failed to parse extracted JSON: ${e}`);
+    }
   }
 }
 
