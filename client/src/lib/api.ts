@@ -18,6 +18,18 @@ export async function fetchChallenges(): Promise<Challenge[]> {
   return response.json();
 }
 
+export async function generateChallenges(): Promise<{ message: string; challenges: Challenge[] }> {
+  const response = await fetch(`${API_BASE}/challenges/generate`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to generate challenges");
+  }
+
+  return response.json();
+}
+
 export async function publishIssue(issue: InsertIssue): Promise<Issue> {
   const response = await fetch(`${API_BASE}/issues/publish`, {
     method: "POST",

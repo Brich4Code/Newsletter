@@ -11,19 +11,25 @@ export class ChallengeGeneratorAgent {
     log("[ChallengeGenerator] Creating weekly challenges...", "agent");
 
     try {
-      const prompt = `Generate 3 creative AI/ML coding challenges for a weekly newsletter.
+      const prompt = `Generate 5 creative, practical, and non-technical AI challenges for a weekly newsletter.
 
 REQUIREMENTS:
-- Beginner to intermediate difficulty
-- Solvable in 30-60 minutes
-- Related to current AI/ML concepts or recent news
-- Fun, educational, and practical
-- Clear learning outcomes
+- Accessible to non-experts (no coding required unless it's low-code/no-code like Zapier/Make)
+- Solvable in 15-45 minutes
+- Related to using NEW AI tools, features, or creative prompting
+- Focus on "doing something cool" or "saving time" 
+- FUN and engaging (not just "summarize an email")
+
+Examples of good challenges:
+- "Create a family recipe book using ChatGPT and an image generator"
+- "Build a simple personal budget tracker using Claude and a spreadsheet"
+- "Use an AI music generator to create a theme song for your pet"
+- "Set up a Google Alert + AI summary workflow"
 
 Each challenge should have:
 - Catchy title (under 60 chars)
-- Clear description (150-200 words)
-- Type: "code", "prompt_engineering", "data_analysis", or "model_training"
+- Description (150-200 words) with simple, clear steps
+- Type: "creative", "productivity", "prompt_engineering", or "no_code"
 
 Return as JSON array:
 [
