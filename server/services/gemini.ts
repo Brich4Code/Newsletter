@@ -264,13 +264,26 @@ Requirements:
     const response = await this.generateWithFlash(prompt, options);
 
     // Extract JSON from markdown code blocks if present
-    const jsonMatch = response.match(/```json\n?([\s\S]*?)\n?```/) || response.match(/\{[\s\S]*\}/);
+    const jsonMatch = response.match(/```json\n?([\s\S]*?)\n?```/) ||
+      response.match(/```\n?([\s\S]*?)\n?```/) ||
+      response.match(/(\[\s*[\s\S]*\s*\])/) ||
+      response.match(/(\{\s*[\s\S]*\s*\})/);
 
     if (!jsonMatch) {
       throw new Error("No valid JSON found in response");
     }
 
-    return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    // specific fix for "Unexpected non-whitespace character after JSON"
+    // Sometimes models add text after the JSON even without markdown blocks
+    // We try to parse the matched group. 
+    // If the match was greedy and captured extra text, we might need to be smarter.
+    // Ideally the regexes above should capture the JSON structure.
+    // The simple array/object matchers above are greedy, so we rely on JSON.parse to be strict.
+    // However, if we grabbed the *whole* string but it has trailing text, we fail.
+
+    // Let's try to clean the string before parsing
+    const jsonString = (jsonMatch[1] || jsonMatch[0]).trim();
+    return JSON.parse(jsonString);
   }
 }
 
