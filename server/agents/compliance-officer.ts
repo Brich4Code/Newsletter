@@ -129,7 +129,7 @@ SPECIFIC FIXES NEEDED:
 CRITICAL OUTPUT INSTRUCTIONS:
 1. Do NOT include any internal thought process, reasoning, or conversational text.
 2. Return ONLY the corrected Markdown content.
-3. Wrap the output in a markdown code block (```markdown ... ```).`;
+3. Wrap the output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
 
     try {
       let fixedDraft = await geminiService.generateWithPro(prompt, {
