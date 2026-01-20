@@ -32,6 +32,7 @@ export interface SimpleIssueContent {
  * NEW APPROACH - Leverage AI's native power:
  * 1. Phase 1 (Perplexity): Research stories with verified URLs and fact-checking
  * 2. Phase 2 (Gemini Flash Preview): Write newsletter following style guide
+ * 3. Phase 3 (Auto Word Count Fix): Validate 325-400 words, rewrite if needed (preserves links)
  *
  * REMOVED:
  * - Pre-fetched story summaries
@@ -48,7 +49,7 @@ export class WriterAgent {
    * AI handles research, fact-checking, and writing
    */
   async generateNewsletter(content: SimpleIssueContent, issueNumber: number): Promise<string> {
-    log("[Writer] Starting simplified two-phase generation...", "agent");
+    log("[Writer] Starting simplified three-phase generation...", "agent");
 
     try {
       // Phase 1: Research and fact-check using Perplexity (verified URLs)
@@ -57,7 +58,11 @@ export class WriterAgent {
 
       // Phase 2: Write newsletter using Gemini Flash Preview
       log("[Writer Phase 2] Writing newsletter...", "agent");
-      const draft = await this.writeNewsletter(research, issueNumber);
+      let draft = await this.writeNewsletter(research, issueNumber);
+
+      // Phase 3: Validate and fix word counts (325-400 words per story)
+      log("[Writer Phase 3] Validating word counts...", "agent");
+      draft = await this.validateAndFixWordCounts(draft);
 
       log("[Writer] Draft generated successfully", "agent");
       return draft;
@@ -288,6 +293,7 @@ Use the research notes to craft engaging, fact-checked content.
 - Each of the 6 headlines MUST have exactly 1 embedded URL from "Weekly Scoop URLs"
 - Format: 🤖 [Headline text that describes the story](https://actual-url.com)
 - Use ALL 6 URLs from the Weekly Scoop URL bank
+- ⚠️ CRITICAL: Write ORIGINAL headlines in your own words. Do NOT copy verbatim from sources. Rewrite each headline to be unique, engaging, and avoid plagiarism
 
 ## Sources Section (Section 11):
 After the Wrap Up section, add:
@@ -349,6 +355,149 @@ CRITICAL OUTPUT INSTRUCTIONS:
     }
 
     return draft;
+  }
+
+  /**
+   * Phase 3: Validate word counts for main and secondary stories
+   * Ensures both stories are between 325-400 words
+   * Auto-fixes if out of range while preserving all embedded links
+   */
+  private async validateAndFixWordCounts(draft: string): Promise<string> {
+    // Extract main and secondary story sections
+    const sections = this.extractStorySections(draft);
+
+    if (!sections.mainStory && !sections.secondaryStory) {
+      log("[Writer] Could not extract story sections for word count validation", "agent");
+      return draft; // Return as-is if extraction fails
+    }
+
+    let updatedDraft = draft;
+    let needsRewrite = false;
+
+    // Check main story word count
+    if (sections.mainStory) {
+      const mainWordCount = this.countWords(sections.mainStory.content);
+      log(`[Writer] Main story word count: ${mainWordCount}`, "agent");
+
+      if (mainWordCount < 325 || mainWordCount > 400) {
+        log(`[Writer] Main story out of range (325-400). Rewriting to 350 words...`, "agent");
+        const rewritten = await this.rewriteToWordCount(sections.mainStory.content, 350);
+        updatedDraft = updatedDraft.replace(sections.mainStory.content, rewritten);
+        needsRewrite = true;
+      }
+    }
+
+    // Check secondary story word count
+    if (sections.secondaryStory) {
+      const secondaryWordCount = this.countWords(sections.secondaryStory.content);
+      log(`[Writer] Secondary story word count: ${secondaryWordCount}`, "agent");
+
+      if (secondaryWordCount < 325 || secondaryWordCount > 400) {
+        log(`[Writer] Secondary story out of range (325-400). Rewriting to 350 words...`, "agent");
+        const rewritten = await this.rewriteToWordCount(sections.secondaryStory.content, 350);
+        updatedDraft = updatedDraft.replace(sections.secondaryStory.content, rewritten);
+        needsRewrite = true;
+      }
+    }
+
+    if (needsRewrite) {
+      log("[Writer] Word count validation complete. Stories rewritten.", "agent");
+    } else {
+      log("[Writer] Word count validation complete. All stories within range.", "agent");
+    }
+
+    return updatedDraft;
+  }
+
+  /**
+   * Extract main and secondary story sections from the draft
+   * Returns content from H1 header through all subsections until next major section
+   */
+  private extractStorySections(draft: string): {
+    mainStory: { content: string } | null;
+    secondaryStory: { content: string } | null;
+  } {
+    // Find main story: from first H1 with emoji until Weekly Scoop or next H1
+    const mainStoryMatch = draft.match(/(^|\n)(#\s+[^\n]+\n[\s\S]*?)(?=\n##?\s+Weekly Scoop|$)/m);
+
+    // Find secondary story: typically the second H1 before Weekly Scoop
+    const h1Headers = Array.from(draft.matchAll(/^#\s+[^\n]+$/gm));
+
+    let mainStory = null;
+    let secondaryStory = null;
+
+    if (h1Headers.length >= 1) {
+      // Main story: from first H1 to second H1 (or Weekly Scoop)
+      const firstH1Index = h1Headers[0].index!;
+      const secondH1Index = h1Headers.length > 1 ? h1Headers[1].index! : -1;
+      const weeklyScoopIndex = draft.indexOf('Weekly Scoop');
+
+      const mainEndIndex = secondH1Index !== -1 ? secondH1Index : (weeklyScoopIndex !== -1 ? weeklyScoopIndex : draft.length);
+      mainStory = {
+        content: draft.substring(firstH1Index, mainEndIndex).trim()
+      };
+
+      // Secondary story: from second H1 to Weekly Scoop
+      if (h1Headers.length >= 2 && weeklyScoopIndex !== -1) {
+        secondaryStory = {
+          content: draft.substring(secondH1Index, weeklyScoopIndex).trim()
+        };
+      }
+    }
+
+    return { mainStory, secondaryStory };
+  }
+
+  /**
+   * Count words in a text section (excluding markdown syntax)
+   */
+  private countWords(text: string): number {
+    // Remove markdown headers (# symbols)
+    let cleaned = text.replace(/^#+\s+/gm, '');
+
+    // Remove markdown links but keep anchor text: [text](url) -> text
+    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+    // Remove emojis
+    cleaned = cleaned.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+
+    // Split by whitespace and count
+    const words = cleaned.trim().split(/\s+/).filter(w => w.length > 0);
+    return words.length;
+  }
+
+  /**
+   * Rewrite a story section to hit exact word count while preserving all links
+   */
+  private async rewriteToWordCount(section: string, targetWords: number): Promise<string> {
+    const currentWords = this.countWords(section);
+
+    const rewritePrompt = `You are rewriting a newsletter story section to meet an exact word count requirement.
+
+ORIGINAL SECTION (${currentWords} words):
+${section}
+
+TARGET: Exactly ${targetWords} words
+
+CRITICAL REQUIREMENTS:
+1. **PRESERVE ALL EMBEDDED LINKS EXACTLY** - Do not modify, remove, or add any [anchor text](url) links
+2. **Keep the same anchor text** - Only adjust surrounding content, not the linked text
+3. **Maintain all H2 subsection headers** with emojis
+4. **Keep the same structure and flow**
+5. Adjust ONLY the non-link content to ${currentWords < targetWords ? 'expand' : 'condense'} to exactly ${targetWords} words
+
+${currentWords < targetWords
+  ? 'Add more context, details, or examples to reach the word count.'
+  : 'Condense by removing redundancy while keeping key information.'}
+
+Output ONLY the rewritten section with no explanations or conversational text.`;
+
+    const rewritten = await geminiService.generateWithPro(rewritePrompt, {
+      temperature: 0.4, // Lower temp for precision
+      maxTokens: 4096,
+    });
+
+    return rewritten.trim();
   }
 
 }
