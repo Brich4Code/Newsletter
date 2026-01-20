@@ -6,6 +6,7 @@ export interface GenerationOptions {
   maxTokens?: number;
   topP?: number;
   topK?: number;
+  useGroundedSearch?: boolean; // Enable Google Search grounding
 }
 
 export interface SearchResult {
@@ -90,7 +91,7 @@ export class GeminiService {
     this.initialize();
 
     try {
-      log("[Gemini Pro] Generating...", "gemini");
+      log(`[Gemini Pro] Generating${options?.useGroundedSearch ? ' with Google Search grounding' : ''}...`, "gemini");
       const result = await this.proModel!.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
@@ -99,6 +100,13 @@ export class GeminiService {
           topP: options?.topP,
           topK: options?.topK,
         },
+        ...(options?.useGroundedSearch && {
+          tools: [
+            {
+              googleSearch: {},
+            },
+          ],
+        }),
       });
 
       const response = result.response;
