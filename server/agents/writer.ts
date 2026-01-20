@@ -21,10 +21,32 @@ export class WriterAgent {
 
     try {
       const prompt = this.buildPrompt(content, issueNumber);
-      const draft = await geminiService.generateWithPro(prompt, {
+      let draft = await geminiService.generateWithPro(prompt, {
         temperature: 0.8, // More creative for writing
         maxTokens: 8192,
       });
+
+      // Extract markdown from code block if present
+      const match = draft.match(/```markdown\n([\s\S]*?)\n?```/);
+      if (match) {
+        draft = match[1];
+      } else {
+        // Fallback: strip any leading conversational text if no code block
+        // Look for the start of the newsletter (usually Subject Line or Welcome)
+        const possibleStarts = ["Subject Line", "Welcome to Jumble", "# "];
+        let earliestStart = -1;
+        
+        for (const start of possibleStarts) {
+          const index = draft.indexOf(start);
+          if (index !== -1 && (earliestStart === -1 || index < earliestStart)) {
+            earliestStart = index;
+          }
+        }
+        
+        if (earliestStart > 0) {
+          draft = draft.substring(earliestStart);
+        }
+      }
 
       log("[Writer] Draft generated successfully", "agent");
       return draft;
@@ -76,8 +98,13 @@ Write the complete newsletter following the structure and rules defined in the S
 Use the content provided above to fill the sections.
 
 Ensure all word counts and formatting rules are strictly followed.
-Generate the Output in Markdown format.`;
+
+CRITICAL OUTPUT INSTRUCTIONS:
+1. Do NOT include any internal thought process, reasoning, or conversational text.
+2. Output ONLY the final newsletter content.
+3. Wrap the entire output in a markdown code block (```markdown ... ```).`;
   }
+
 }
 
 // Singleton instance
