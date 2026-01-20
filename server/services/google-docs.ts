@@ -25,7 +25,7 @@ interface FormattingInstruction {
 export class GoogleDocsService {
   private docs: docs_v1.Docs | null = null;
   private drive: any = null;
-  private auth: JWT | null = null;
+  private auth: any = null; // JWT | OAuth2Client
 
   /**
    * Initialize the service (lazy - only called when first needed)
@@ -35,32 +35,53 @@ export class GoogleDocsService {
       return; // Already initialized
     }
 
-    // Service Account authentication
-    const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+    // Try OAuth2 first (Preferred for personal accounts/folders)
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
-    if (!email || !privateKey) {
-      throw new Error(
-        "Google Service Account credentials not configured. " +
-        "Please set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY in Replit Secrets."
+    if (clientId && clientSecret && refreshToken) {
+      log("[Google Docs] Initializing with OAuth2...", "docs");
+      
+      const oauth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret
       );
+
+      oauth2Client.setCredentials({
+        refresh_token: refreshToken
+      });
+
+      this.auth = oauth2Client;
+      log("[Google Docs] OAuth2 authentication configured", "docs");
+    } 
+    // Fallback to Service Account (JWT)
+    else {
+      const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+      const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+
+      if (!email || !privateKey) {
+        throw new Error(
+          "Google Credentials not found. Please set GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN (OAuth) " +
+          "OR GOOGLE_SERVICE_ACCOUNT_EMAIL/PRIVATE_KEY (Service Account)."
+        );
+      }
+
+      log(`[Google Docs] Initializing with Service Account: ${email}`, "docs");
+      
+      const hasHeader = privateKey?.includes("BEGIN PRIVATE KEY");
+      log(`[Google Docs] Private key has header: ${hasHeader}`, "docs");
+      log(`[Google Docs] Private key length: ${privateKey?.length}`, "docs");
+
+      this.auth = new JWT({
+        email,
+        key: privateKey,
+        scopes: [
+          "https://www.googleapis.com/auth/documents",
+          "https://www.googleapis.com/auth/drive",
+        ],
+      });
     }
-
-    log(`[Google Docs] Initializing with email: ${email}`, "docs");
-    
-    const hasHeader = privateKey?.includes("BEGIN PRIVATE KEY");
-    log(`[Google Docs] Private key has header: ${hasHeader}`, "docs");
-    log(`[Google Docs] Private key start: ${privateKey?.substring(0, 20)}...`, "docs");
-    log(`[Google Docs] Private key length: ${privateKey?.length}`, "docs");
-
-    this.auth = new JWT({
-      email,
-      key: privateKey,
-      scopes: [
-        "https://www.googleapis.com/auth/documents",
-        "https://www.googleapis.com/auth/drive",
-      ],
-    });
 
     this.docs = google.docs({ version: "v1", auth: this.auth });
     this.drive = google.drive({ version: "v3", auth: this.auth });
@@ -76,16 +97,14 @@ export class GoogleDocsService {
 
     try {
       log("[Google Docs] Creating newsletter document...", "docs");
-      log(`[Google Docs] Using service account: ${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}`, "docs");
-
+      
       // 1. Create document
       let documentId: string;
       const folderId = process.env.GOOGLE_DOCS_FOLDER_ID;
       const title = `Hello Jumble - Issue #${content.issueNumber}`;
 
       if (folderId) {
-         // Method A: Create DIRECTLY in the shared folder using Drive API
-         // This bypasses the Service Account's 0GB quota issue
+         // Create directly in folder
          log(`[Google Docs] Creating document inside folder: ${folderId}`, "docs");
          
          const driveFile = await this.drive.files.create({
@@ -98,8 +117,8 @@ export class GoogleDocsService {
          documentId = driveFile.data.id;
          log(`[Google Docs] Created document via Drive API: ${documentId}`, "docs");
       } else {
-         // Method B: Legacy creation in root (will fail for Service Accounts without quota)
-         log("[Google Docs] Creating blank document in root...", "docs");
+         // Create in root
+         log("[Google Docs] Creating document in root (My Drive)...", "docs");
          const doc = await this.docs!.documents.create({
             requestBody: {
               title: title,
@@ -110,7 +129,7 @@ export class GoogleDocsService {
       }
       
       log("[Google Docs] Step 1: Document created successfully", "docs");
-
+      
       // 2. Parse markdown and build formatting instructions
       const { plainText, formatting } = this.parseMarkdown(content.markdown);
 
