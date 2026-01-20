@@ -113,6 +113,34 @@ Provide comprehensive research notes for each story including:
 - **Context**: Background and why this matters
 - **Verification Notes**: Any concerns or conflicting info
 
+⚠️ CRITICAL - END YOUR RESEARCH WITH THIS SECTION:
+
+---
+# VERIFIED URL BANK
+(List ALL URLs found during research. The writer will ONLY use URLs from this list.)
+
+Main Story URLs:
+- [URL 1]
+- [URL 2]
+...
+
+Secondary Story URLs:
+- [URL 1]
+- [URL 2]
+...
+
+Weekly Scoop URLs:
+- [URL 1]
+- [URL 2]
+...
+
+Weekly Challenge URLs:
+- [URL 1]
+...
+
+⚠️ Copy each URL exactly character-for-character. No shortened URLs, no modified URLs. These will be the ONLY URLs used in the newsletter.
+---
+
 Be thorough - this research will be used to write the newsletter.`;
 
     const research = await geminiService.generateWithPro(researchPrompt, {
@@ -159,6 +187,16 @@ Use the research notes to craft engaging, fact-checked content.
 
 ⚠️ CRITICAL: You MUST complete ALL 10 sections above. Do NOT stop early or skip sections. The newsletter is NOT complete without all sections.
 
+# 🚨 CRITICAL URL RULES - READ CAREFULLY:
+
+1. **ONLY USE URLs FROM THE "VERIFIED URL BANK" SECTION** in the research notes above
+2. **COPY URLs EXACTLY** character-for-character - do NOT modify, shorten, or recreate them
+3. **DO NOT INVENT OR HALLUCINATE URLs** - if you need a URL, it MUST be in the URL bank
+4. **NO PLACEHOLDERS** - do not use example.com or any fake URLs
+5. If you can't find a URL in the bank for a claim, either:
+   - Find a different claim from the research that HAS a URL in the bank
+   - OR omit that specific claim
+
 Ensure all word counts, formatting rules, and link standards are strictly followed.
 
 CRITICAL OUTPUT INSTRUCTIONS:
@@ -168,7 +206,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
 4. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
 
     let draft = await geminiService.generateWithPro(writePrompt, {
-      temperature: 0.8, // More creative for writing
+      temperature: 0.5, // Lower temp to reduce URL hallucination (was 0.8)
       maxTokens: 16384, // Increased from 8192 to ensure full newsletter fits
     });
 
