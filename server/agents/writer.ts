@@ -30,7 +30,7 @@ export interface SimpleIssueContent {
  * Simplified Writer Agent
  *
  * NEW APPROACH - Leverage AI's native power:
- * 1. Phase 1 (Perplexity): Research stories with verified URLs and fact-checking
+ * 1. Phase 1 (Perplexity): Research stories with verified URLs and fact-checking (full research, no condensation)
  * 2. Phase 2 (Gemini Flash Preview): Write newsletter following style guide
  * 3. Phase 3 (Auto Word Count Fix): Validate 325-400 words, rewrite if needed (preserves links)
  *
@@ -40,6 +40,7 @@ export interface SimpleIssueContent {
  * - Separate compliance officer agent
  * - Complex prompt building with embedded content
  * - Gemini grounded search (replaced with Perplexity for better URL accuracy)
+ * - Research condensation (was causing issues)
  *
  * The AI does what it does best: search, research, and write.
  */
@@ -178,15 +179,7 @@ Provide working URLs to reputable resources.`,
       )
     );
 
-    // Condense research to save tokens (extract key facts only)
-    log(`[Writer] Condensing research to key facts...`, "agent");
-    const condensedResults = await Promise.all(
-      results.map(({ category, answer, citations }) =>
-        this.condenseResearch(category, answer, citations)
-      )
-    );
-
-    // Build condensed research document with URL bank
+    // Build research document with URL bank (using full Perplexity output)
     const researchSections: string[] = [];
     const urlsByCategory: { [key: string]: string[] } = {
       "Main Story": [],
@@ -195,8 +188,8 @@ Provide working URLs to reputable resources.`,
       "Weekly Challenge": [],
     };
 
-    condensedResults.forEach(({ category, condensed, citations }) => {
-      researchSections.push(`\n## ${category}\n\n${condensed}\n`);
+    results.forEach(({ category, answer, citations }) => {
+      researchSections.push(`\n## ${category}\n\n${answer}\n`);
 
       // Categorize URLs
       if (category === "Main Story") {
@@ -237,56 +230,6 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
     log(`[Writer] Total research length: ${totalResearchWords} words (~${Math.ceil(totalResearchWords * 1.3)} tokens)`, "agent");
 
     return fullResearch;
-  }
-
-  /**
-   * Condense Perplexity research to key facts only
-   * Reduces token usage by ~40-50% while preserving essential information
-   */
-  private async condenseResearch(
-    category: string,
-    fullAnswer: string,
-    citations: string[]
-  ): Promise<{ category: string; condensed: string; citations: string[] }> {
-    const condensPrompt = `Extract ONLY the key facts from this research. Be concise and factual.
-
-RESEARCH:
-${fullAnswer}
-
-OUTPUT FORMAT:
-Return a bulleted list of key facts (max 10-12 bullets). Include:
-- Specific statistics/numbers with context
-- Direct quotes from key people (if any)
-- Important dates and events
-- Core claims and findings
-- Key background information necessary for understanding
-
-Remove fluff and excessive repetition. Keep it under 500 words total.`;
-
-    try {
-      const condensed = await geminiService.generateWithPro(condensPrompt, {
-        temperature: 0.2, // Very low for factual extraction
-        maxTokens: 1500, // Enough for ~500 words
-      });
-
-      const wordCount = condensed.trim().split(/\s+/).length;
-      log(`[Writer] ${category} condensed to ${wordCount} words (from ${fullAnswer.split(/\s+/).length} words)`, "agent");
-
-      return {
-        category,
-        condensed: condensed.trim(),
-        citations,
-      };
-    } catch (error) {
-      // Fallback: use first 500 words of original if condensing fails
-      log(`[Writer] Failed to condense ${category}, using truncated original`, "agent");
-      const words = fullAnswer.split(/\s+/).slice(0, 500).join(' ');
-      return {
-        category,
-        condensed: words + '...',
-        citations,
-      };
-    }
   }
 
   /**
