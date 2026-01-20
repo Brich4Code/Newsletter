@@ -76,10 +76,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearRecentChallenges(): Promise<void> {
-    // Only delete challenges that are NOT assigned to any issue
-    // For simplicity in this "shuffle" context, we might just wipe unassigned ones or all recent ones
-    // But to be safe, we'll delete all challenges since they are ephemeral suggestions until published
-    await db.delete(challenges);
+    // Only delete challenges that are NOT assigned to any issue (referenced in issues table)
+    // We use raw SQL to ensure the NOT EXISTS clause works correctly across different SQL dialects supported by Drizzle
+    await db.execute(sql`
+      DELETE FROM challenges 
+      WHERE NOT EXISTS (
+        SELECT 1 FROM issues WHERE issues.challenge_id = challenges.id
+      )
+    `);
   }
 
   // Issues
