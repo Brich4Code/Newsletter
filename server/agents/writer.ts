@@ -1,4 +1,5 @@
 import { geminiService } from "../services/gemini";
+import { perplexityService } from "../services/perplexity";
 import { NewsletterStyleGuide } from "../config/style-guide";
 import { log } from "../index";
 
@@ -29,7 +30,7 @@ export interface SimpleIssueContent {
  * Simplified Writer Agent
  *
  * NEW APPROACH - Leverage AI's native power:
- * 1. Phase 1 (Gemini Pro): Research stories using grounded search, fact-check, gather sources
+ * 1. Phase 1 (Perplexity): Research stories with verified URLs and fact-checking
  * 2. Phase 2 (Gemini Flash Preview): Write newsletter following style guide
  *
  * REMOVED:
@@ -37,6 +38,7 @@ export interface SimpleIssueContent {
  * - Separate investigator agent
  * - Separate compliance officer agent
  * - Complex prompt building with embedded content
+ * - Gemini grounded search (replaced with Perplexity for better URL accuracy)
  *
  * The AI does what it does best: search, research, and write.
  */
@@ -49,8 +51,8 @@ export class WriterAgent {
     log("[Writer] Starting simplified two-phase generation...", "agent");
 
     try {
-      // Phase 1: Research and fact-check using Gemini Pro with grounded search
-      log("[Writer Phase 1] Researching and fact-checking stories...", "agent");
+      // Phase 1: Research and fact-check using Perplexity (verified URLs)
+      log("[Writer Phase 1] Researching and fact-checking stories with Perplexity...", "agent");
       const research = await this.researchStories(content);
 
       // Phase 2: Write newsletter using Gemini Flash Preview
@@ -66,90 +68,140 @@ export class WriterAgent {
   }
 
   /**
-   * Phase 1: Research all stories using Gemini Pro with grounded search
-   * AI finds sources, fact-checks, and gathers detailed information
+   * Phase 1: Research all stories using Perplexity
+   * Perplexity provides verified URLs and fact-checked information
    */
   private async researchStories(content: SimpleIssueContent): Promise<string> {
-    const researchPrompt = `You are a research assistant for the Hello Jumble AI newsletter. Research the following stories using Google Search and gather comprehensive, fact-checked information.
+    const researchPrompts: { category: string; prompt: string }[] = [];
 
-# STORIES TO RESEARCH:
+    // Main story research
+    researchPrompts.push({
+      category: "Main Story",
+      prompt: `Research this AI news story in detail: "${content.mainStory.title}"${content.mainStory.url ? `\nOriginal source: ${content.mainStory.url}` : ''}
 
-## Main Story
-${content.mainStory.url ? `Title: ${content.mainStory.title}\nSource URL: ${content.mainStory.url}` : `Topic: ${content.mainStory.title}`}
+Provide:
+- Key facts, statistics, dates, and verified claims
+- Quotes from key people or organizations
+- Context and background (why this matters)
+- Multiple reputable sources
+- Any verification concerns
 
-${content.secondaryStory ? `## Secondary Story
-${content.secondaryStory.url ? `Title: ${content.secondaryStory.title}\nSource URL: ${content.secondaryStory.url}` : `Topic: ${content.secondaryStory.title}`}` : ''}
-
-${content.quickLinks && content.quickLinks.length > 0 ? `## Quick Links for Weekly Scoop
-${content.quickLinks.map((link, i) =>
-  link.url ? `${i + 1}. ${link.title}\n   URL: ${link.url}` : `${i + 1}. ${link.title}`
-).join('\n')}
-
-Note: Find 6 diverse, newsworthy AI stories from the past week for Weekly Scoop section` : `## Weekly Scoop
-Find 6 diverse, newsworthy AI stories from the past week`}
-
-${content.challenge ? `## Weekly Challenge
-Title: ${content.challenge.title}
-${content.challenge.description ? `Description: ${content.challenge.description}` : ''}
-
-Find relevant tutorials, videos, or resources for this challenge.` : ''}
-
-# RESEARCH REQUIREMENTS:
-
-For each story:
-1. Use Google Search to find recent, reputable sources (within last 7 days preferred)
-2. Fact-check all claims and statistics - verify with multiple sources
-3. Gather key details, quotes, context, and background
-4. Find primary sources when possible (original announcements, company blogs, etc.)
-5. For videos/posts, get the actual publisher URL, not rehosted clips
-6. Note any verification issues or conflicting information
-
-# OUTPUT FORMAT:
-
-Provide comprehensive research notes for each story including:
-- **Key Facts**: Verified statistics, dates, names, and claims
-- **Sources**: Canonical URLs from reputable outlets (no tracking params)
-- **Quotes**: Important statements from key people/entities
-- **Context**: Background and why this matters
-- **Verification Notes**: Any concerns or conflicting info
-
-⚠️ CRITICAL - END YOUR RESEARCH WITH THIS SECTION:
-
----
-# VERIFIED URL BANK
-(List ALL URLs found during research. The writer will ONLY use URLs from this list.)
-
-Main Story URLs:
-- [URL 1]
-- [URL 2]
-...
-
-Secondary Story URLs:
-- [URL 1]
-- [URL 2]
-...
-
-Weekly Scoop URLs:
-- [URL 1]
-- [URL 2]
-...
-
-Weekly Challenge URLs:
-- [URL 1]
-...
-
-⚠️ Copy each URL exactly character-for-character. No shortened URLs, no modified URLs. These will be the ONLY URLs used in the newsletter.
----
-
-Be thorough - this research will be used to write the newsletter.`;
-
-    const research = await geminiService.generateWithPro(researchPrompt, {
-      temperature: 0.3, // Lower temperature for factual research
-      maxTokens: 8192,
-      useGroundedSearch: true, // Enable Google Search grounding for research
+Focus on recent sources (last 7 days preferred). Include canonical URLs without tracking parameters.`,
     });
 
-    return research;
+    // Secondary story research
+    if (content.secondaryStory) {
+      researchPrompts.push({
+        category: "Secondary Story",
+        prompt: `Research this AI news story: "${content.secondaryStory.title}"${content.secondaryStory.url ? `\nOriginal source: ${content.secondaryStory.url}` : ''}
+
+Provide:
+- Key facts and verified claims
+- Important quotes
+- Context and significance
+- Reputable sources
+
+Focus on recent sources. Include clean URLs.`,
+      });
+    }
+
+    // Weekly Scoop research
+    if (content.quickLinks && content.quickLinks.length > 0) {
+      // Research provided quick links
+      content.quickLinks.forEach((link, i) => {
+        researchPrompts.push({
+          category: `Weekly Scoop #${i + 1}`,
+          prompt: `Research this AI news item: "${link.title}"${link.url ? `\nSource: ${link.url}` : ''}
+
+Provide a brief summary (2-3 sentences) with key facts and the source URL.`,
+        });
+      });
+    } else {
+      // Find 6 diverse AI stories for Weekly Scoop
+      researchPrompts.push({
+        category: "Weekly Scoop",
+        prompt: `Find 6 diverse, newsworthy AI stories from the past week. For each story:
+- Provide a brief headline
+- 1-2 sentence summary
+- Source URL from a reputable outlet
+
+Cover different topics: regulations, product launches, research, company news, controversies, etc.`,
+      });
+    }
+
+    // Weekly Challenge research
+    if (content.challenge) {
+      researchPrompts.push({
+        category: "Weekly Challenge",
+        prompt: `Find resources for this weekly challenge: "${content.challenge.title}"${content.challenge.description ? `\nDescription: ${content.challenge.description}` : ''}
+
+Find:
+- Tutorial links (especially YouTube videos)
+- Step-by-step guides
+- Relevant tools or platforms
+- Example use cases
+
+Provide working URLs to reputable resources.`,
+      });
+    }
+
+    // Research all stories using Perplexity
+    log(`[Writer] Researching ${researchPrompts.length} topics with Perplexity...`, "agent");
+    const results = await Promise.all(
+      researchPrompts.map(({ category, prompt }) =>
+        perplexityService.research(prompt).then(result => ({ category, ...result }))
+      )
+    );
+
+    // Build comprehensive research document with URL bank
+    const researchSections: string[] = [];
+    const urlsByCategory: { [key: string]: string[] } = {
+      "Main Story": [],
+      "Secondary Story": [],
+      "Weekly Scoop": [],
+      "Weekly Challenge": [],
+    };
+
+    results.forEach(({ category, answer, citations }) => {
+      researchSections.push(`\n## ${category}\n\n${answer}\n`);
+
+      // Categorize URLs
+      if (category === "Main Story") {
+        urlsByCategory["Main Story"].push(...citations);
+      } else if (category === "Secondary Story") {
+        urlsByCategory["Secondary Story"].push(...citations);
+      } else if (category.startsWith("Weekly Scoop")) {
+        urlsByCategory["Weekly Scoop"].push(...citations);
+      } else if (category === "Weekly Challenge") {
+        urlsByCategory["Weekly Challenge"].push(...citations);
+      }
+    });
+
+    // Build URL bank
+    const urlBank = `
+---
+# VERIFIED URL BANK
+⚠️ These URLs come from Perplexity research and are verified to work.
+The writer must ONLY use URLs from this list.
+
+**Main Story URLs:**
+${urlsByCategory["Main Story"].map(url => `- ${url}`).join('\n') || '- (No URLs found)'}
+
+**Secondary Story URLs:**
+${urlsByCategory["Secondary Story"].map(url => `- ${url}`).join('\n') || '- (No URLs found)'}
+
+**Weekly Scoop URLs:**
+${urlsByCategory["Weekly Scoop"].map(url => `- ${url}`).join('\n') || '- (No URLs found)'}
+
+**Weekly Challenge URLs:**
+${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No URLs found)'}
+---`;
+
+    const fullResearch = researchSections.join('\n') + '\n' + urlBank;
+
+    log(`[Writer] Research complete. Found ${results.reduce((sum, r) => sum + r.citations.length, 0)} verified URLs`, "agent");
+
+    return fullResearch;
   }
 
   /**
