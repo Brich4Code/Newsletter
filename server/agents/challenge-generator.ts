@@ -28,7 +28,7 @@ Examples of good challenges:
 
 Each challenge should have:
 - Catchy title (under 60 chars)
-- Description (150-200 words) with simple, clear steps
+- Description (80-100 words) with simple, clear steps
 - Type: "creative", "productivity", "prompt_engineering", or "no_code"
 
 Return as JSON array:
