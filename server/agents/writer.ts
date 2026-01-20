@@ -79,14 +79,20 @@ export class WriterAgent {
       category: "Main Story",
       prompt: `Research this AI news story in detail: "${content.mainStory.title}"${content.mainStory.url ? `\nOriginal source: ${content.mainStory.url}` : ''}
 
+🔍 CRITICAL: Find exactly 5-7 different reputable source URLs for this story.
+
 Provide:
 - Key facts, statistics, dates, and verified claims
 - Quotes from key people or organizations
 - Context and background (why this matters)
-- Multiple reputable sources
+- 5-7 DIFFERENT reputable source URLs (primary sources, major news outlets, company blogs)
 - Any verification concerns
 
-Focus on recent sources (last 7 days preferred). Include canonical URLs without tracking parameters.`,
+Requirements:
+- Find 5-7 unique, working URLs from different outlets
+- Focus on recent sources (last 7 days preferred)
+- Include canonical URLs without tracking parameters
+- Prefer primary sources (official announcements, company blogs) when available`,
     });
 
     // Secondary story research
@@ -95,37 +101,51 @@ Focus on recent sources (last 7 days preferred). Include canonical URLs without 
         category: "Secondary Story",
         prompt: `Research this AI news story: "${content.secondaryStory.title}"${content.secondaryStory.url ? `\nOriginal source: ${content.secondaryStory.url}` : ''}
 
+🔍 CRITICAL: Find exactly 5-7 different reputable source URLs for this story.
+
 Provide:
 - Key facts and verified claims
 - Important quotes
 - Context and significance
-- Reputable sources
+- 5-7 DIFFERENT reputable source URLs from various outlets
 
-Focus on recent sources. Include clean URLs.`,
+Requirements:
+- Find 5-7 unique, working URLs
+- Focus on recent sources
+- Include clean URLs without tracking parameters`,
       });
     }
 
     // Weekly Scoop research
     if (content.quickLinks && content.quickLinks.length > 0) {
-      // Research provided quick links
+      // Research provided quick links - get exactly 1 URL per story
       content.quickLinks.forEach((link, i) => {
         researchPrompts.push({
           category: `Weekly Scoop #${i + 1}`,
           prompt: `Research this AI news item: "${link.title}"${link.url ? `\nSource: ${link.url}` : ''}
 
-Provide a brief summary (2-3 sentences) with key facts and the source URL.`,
+🔍 CRITICAL: Find exactly 1 working source URL for this story.
+
+Provide:
+- Brief summary (2-3 sentences) with key facts
+- Exactly 1 reputable source URL (prefer the original article)`,
         });
       });
     } else {
-      // Find 6 diverse AI stories for Weekly Scoop
+      // Find 6 diverse AI stories for Weekly Scoop - 1 URL each
       researchPrompts.push({
         category: "Weekly Scoop",
-        prompt: `Find 6 diverse, newsworthy AI stories from the past week. For each story:
-- Provide a brief headline
-- 1-2 sentence summary
-- Source URL from a reputable outlet
+        prompt: `Find 6 diverse, newsworthy AI stories from the past week.
 
-Cover different topics: regulations, product launches, research, company news, controversies, etc.`,
+🔍 CRITICAL: For EACH of the 6 stories, provide exactly 1 working source URL.
+
+For each story provide:
+- Brief headline
+- 1-2 sentence summary
+- Exactly 1 source URL from a reputable outlet
+
+Cover different topics: regulations, product launches, research, company news, controversies, etc.
+Total: 6 stories = 6 URLs`,
       });
     }
 
@@ -232,22 +252,67 @@ Use the research notes to craft engaging, fact-checked content.
 **Section 4: Welcome To This Week's Edition Of Jumble** (45-70 words, end with ⬇️)
 **Section 5: In this newsletter:** (Exactly 5 bullets with emojis)
 **Section 6: Main Story** (H1 with emoji, ~400 words, 2-3 H2 subsections with emojis)
+  - 🔗 MUST embed 5-7 different URLs from Main Story URL bank throughout the story
 **Section 7: Secondary Story** (H1 with emoji, ~350 words, 1-3 H2 subsections with emojis)
+  - 🔗 MUST embed 5-7 different URLs from Secondary Story URL bank throughout the story
 **Section 8: Weekly Scoop 📢** (Exactly 6 headlines, each with emoji and unique link)
+  - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
 **Section 9: Weekly Challenge** (150-200 words with clear steps or scoring)
 **Section 10: Wrap Up** (Bold 1-2 lines inviting replies)
+**Section 11: Sources** - List all URLs used, grouped by section
 
-⚠️ CRITICAL: You MUST complete ALL 10 sections above. Do NOT stop early or skip sections. The newsletter is NOT complete without all sections.
+⚠️ CRITICAL: You MUST complete ALL 11 sections above. Do NOT stop early or skip sections. The newsletter is NOT complete without all sections.
 
-# 🚨 CRITICAL URL RULES - READ CAREFULLY:
+# 🚨 CRITICAL URL EMBEDDING RULES - READ CAREFULLY:
 
+## URL Usage Requirements:
 1. **ONLY USE URLs FROM THE "VERIFIED URL BANK" SECTION** in the research notes above
 2. **COPY URLs EXACTLY** character-for-character - do NOT modify, shorten, or recreate them
 3. **DO NOT INVENT OR HALLUCINATE URLs** - if you need a URL, it MUST be in the URL bank
 4. **NO PLACEHOLDERS** - do not use example.com or any fake URLs
-5. If you can't find a URL in the bank for a claim, either:
-   - Find a different claim from the research that HAS a URL in the bank
-   - OR omit that specific claim
+
+## Link Embedding Requirements:
+
+**Main Story (Section 6):**
+- MUST embed 5-7 DIFFERENT URLs from "Main Story URLs" section of URL bank
+- Embed URLs over natural anchor text (3-9 words)
+- Example: "According to [the company's official announcement](https://actual-url.com), the new feature..."
+- Spread links throughout the story (intro paragraph, H2 subsections)
+
+**Secondary Story (Section 7):**
+- MUST embed 5-7 DIFFERENT URLs from "Secondary Story URLs" section of URL bank
+- Same embedding format as main story
+- Use different URLs for different claims
+
+**Weekly Scoop (Section 8):**
+- Each of the 6 headlines MUST have exactly 1 embedded URL from "Weekly Scoop URLs"
+- Format: 🤖 [Headline text that describes the story](https://actual-url.com)
+- Use ALL 6 URLs from the Weekly Scoop URL bank
+
+## Sources Section (Section 11):
+After the Wrap Up section, add:
+
+---
+## Sources
+
+**Main Story:**
+- URL 1
+- URL 2
+- URL 3
+...
+
+**Secondary Story:**
+- URL 1
+- URL 2
+...
+
+**Weekly Scoop:**
+- URL 1
+- URL 2
+...
+---
+
+⚠️ List ONLY the URLs you actually used in the newsletter, grouped by section.
 
 Ensure all word counts, formatting rules, and link standards are strictly followed.
 
