@@ -141,19 +141,35 @@ ${NewsletterStyleGuide.rules}
 
 # YOUR TASK:
 
-Write the complete newsletter following the structure and rules defined in the STYLE GUIDE section above.
+Write the COMPLETE newsletter following the structure and rules defined in the STYLE GUIDE section above.
 Use the research notes to craft engaging, fact-checked content.
+
+# REQUIRED COMPLETE STRUCTURE - YOU MUST INCLUDE ALL OF THESE SECTIONS:
+
+**Section 1: Subject Line** (40-60 characters)
+**Section 2: Preview Text** (Tease secondary story + one Weekly Scoop item)
+**Section 3: Newsletter Title** (≤60 characters, fresh angle on main story)
+**Section 4: Welcome To This Week's Edition Of Jumble** (45-70 words, end with ⬇️)
+**Section 5: In this newsletter:** (Exactly 5 bullets with emojis)
+**Section 6: Main Story** (H1 with emoji, ~400 words, 2-3 H2 subsections with emojis)
+**Section 7: Secondary Story** (H1 with emoji, ~350 words, 1-3 H2 subsections with emojis)
+**Section 8: Weekly Scoop 📢** (Exactly 6 headlines, each with emoji and unique link)
+**Section 9: Weekly Challenge** (150-200 words with clear steps or scoring)
+**Section 10: Wrap Up** (Bold 1-2 lines inviting replies)
+
+⚠️ CRITICAL: You MUST complete ALL 10 sections above. Do NOT stop early or skip sections. The newsletter is NOT complete without all sections.
 
 Ensure all word counts, formatting rules, and link standards are strictly followed.
 
 CRITICAL OUTPUT INSTRUCTIONS:
 1. Do NOT include any internal thought process, reasoning, or conversational text.
 2. Output ONLY the final newsletter content.
-3. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
+3. Output the COMPLETE newsletter with ALL 10 sections listed above.
+4. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
 
     let draft = await geminiService.generateWithPro(writePrompt, {
       temperature: 0.8, // More creative for writing
-      maxTokens: 8192,
+      maxTokens: 16384, // Increased from 8192 to ensure full newsletter fits
     });
 
     // Extract markdown from code block if present
