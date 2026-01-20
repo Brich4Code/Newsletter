@@ -191,7 +191,8 @@ Return ONLY the corrected Markdown. Do not add explanations or commentary.`;
     // Check that "In this newsletter" has exactly 5 bullets
     const inThisNewsletter = markdown.match(/In this newsletter[:\s]*([\s\S]*?)(?=\n#|$)/i);
     if (inThisNewsletter) {
-      const bullets = inThisNewsletter[1].match(/^[🎨🎲🍿🫧🎯]/gm);
+      // Check for lines starting with an emoji
+      const bullets = inThisNewsletter[1].match(/^\s*[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gmu);
       if (!bullets || bullets.length !== 5) {
         issues.push(`"In this newsletter" should have exactly 5 bullets (found: ${bullets?.length || 0})`);
       }
