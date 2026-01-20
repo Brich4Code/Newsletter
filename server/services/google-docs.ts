@@ -197,61 +197,86 @@ export class GoogleDocsService {
     let plainText = markdown;
     const formatting: FormattingInstruction[] = [];
 
-    // Track offset as we remove markdown syntax
-    let offset = 0;
+    // Helper to process regex matches in reverse order
+    // Processing in reverse allows us to modify the string without affecting 
+    // the indices of matches that appear earlier in the string.
+    const processMatches = (
+      regex: RegExp,
+      getType: (match: RegExpMatchArray) => FormattingInstruction["type"],
+      getReplacement: (match: RegExpMatchArray) => string,
+      getExtraFields: (match: RegExpMatchArray) => Partial<FormattingInstruction> = () => ({})
+    ) => {
+      const matches = Array.from(plainText.matchAll(regex)).reverse();
+
+      for (const match of matches) {
+        if (match.index === undefined) continue;
+
+        const start = match.index;
+        const originalLength = match[0].length;
+        const replacement = getReplacement(match);
+        const replacementLength = replacement.length;
+        const diff = originalLength - replacementLength;
+
+        // 1. Update text
+        plainText = plainText.slice(0, start) + replacement + plainText.slice(start + originalLength);
+
+        // 2. Add new formatting item
+        // The indices for THIS item are based on the NEW text structure 
+        // (after the replacement we just made).
+        // Google Docs uses 1-based indexing.
+        const newItem: FormattingInstruction = {
+          type: getType(match),
+          startIndex: start + 1, 
+          endIndex: start + 1 + replacementLength,
+          ...getExtraFields(match),
+        };
+        formatting.push(newItem);
+
+        // 3. Update existing formatting items
+        // Since we modify the string (shrink it), any existing formatting items 
+        // that are located AFTER or CONTAIN this modification need adjustment.
+        for (const item of formatting) {
+          // Skip the item we just added
+          if (item === newItem) continue;
+
+          // Case A: Item is strictly after the modified region
+          // Shift it left by the diff amount
+          if (item.startIndex > start + 1) {
+             item.startIndex -= diff;
+             item.endIndex -= diff;
+          }
+          // Case B: Item strictly contains the modified region (e.g. bold inside header)
+          // Shorten the item by the diff amount
+          // The item starts before or at the match start, and ends after or at the match end (original end)
+          else if (item.startIndex <= start + 1 && item.endIndex >= start + 1 + originalLength) {
+             item.endIndex -= diff;
+          }
+        }
+      }
+    };
 
     // 1. Parse headers (# H1, ## H2, ### H3)
-    const headerRegex = /^(#{1,3})\s+(.+)$/gm;
-    plainText = plainText.replace(headerRegex, (match, hashes, content, matchIndex) => {
-      const level = hashes.length;
-      const startIndex = matchIndex - offset + 1; // +1 for Docs API (1-indexed)
-      const endIndex = startIndex + content.length;
-
-      formatting.push({
-        type: "heading",
-        startIndex,
-        endIndex,
-        level,
-      });
-
-      // Update offset for removed markdown syntax
-      offset += hashes.length + 1; // hashes + space
-
-      return content + "\n";
-    });
+    processMatches(
+      /^(#{1,3})\s+(.+)$/gm,
+      () => "heading",
+      (match) => match[2] + "\n", // content + newline
+      (match) => ({ level: match[1].length })
+    );
 
     // 2. Parse bold (**text**)
-    const boldRegex = /\*\*([^*]+)\*\*/g;
-    plainText = plainText.replace(boldRegex, (match, content, matchIndex) => {
-      const startIndex = matchIndex - offset + 1;
-      const endIndex = startIndex + content.length;
-
-      formatting.push({
-        type: "bold",
-        startIndex,
-        endIndex,
-      });
-
-      offset += 4; // two ** on each side
-      return content;
-    });
+    processMatches(
+      /\*\*([^*]+)\*\*/g,
+      () => "bold",
+      (match) => match[1] // content
+    );
 
     // 3. Parse links ([text](url))
-    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    plainText = plainText.replace(linkRegex, (match, text, url, matchIndex) => {
-      const startIndex = matchIndex - offset + 1;
-      const endIndex = startIndex + text.length;
-
-      formatting.push({
-        type: "link",
-        startIndex,
-        endIndex,
-        url,
-      });
-
-      offset += match.length - text.length; // remove markdown syntax
-      return text;
-    });
+    processMatches(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      () => "link",
+      (match) => match[1], // text
+      (match) => ({ url: match[2] })
+    );
 
     return { plainText, formatting };
   }
