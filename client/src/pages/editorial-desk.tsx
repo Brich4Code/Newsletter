@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, publishIssue, startResearch, deleteLead, deleteAllLeads } from "@/lib/api";
+import { fetchLeads, fetchChallenges, generateChallenges, publishIssue, startResearch, deleteLead, deleteAllLeads } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2 } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2, Shuffle } from "lucide-react";
 import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
 import { toast } from "@/hooks/use-toast";
 
@@ -117,6 +117,26 @@ export default function EditorialDesk() {
     },
   });
 
+  // Generate challenges mutation
+  const generateChallengesMutation = useMutation({
+    mutationFn: generateChallenges,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["challenges"] });
+      setSelectedChallenge(null); // Clear selection since options changed
+      toast({
+        title: "New Challenges Ready",
+        description: `Generated ${data.challenges.length} new options.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Generation Failed",
+        description: "Couldn't generate new challenges. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteLead = (lead: Lead) => {
     // Remove from selections if selected
     if (selectedMain?.id === lead.id) setSelectedMain(null);
@@ -175,35 +195,35 @@ export default function EditorialDesk() {
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden font-sans selection:bg-primary/20">
-      
+
       {/* Header */}
       <header className="h-16 border-b border-border/40 bg-background/50 backdrop-blur sticky top-0 z-50 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded bg-primary/10 p-1">
-             <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
+            <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="font-display font-bold text-lg tracking-tight leading-none">Editorial Desk</h1>
             <p className="text-xs text-muted-foreground mt-0.5">Hello Jumble Newsroom</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 mr-2 text-xs text-muted-foreground bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/30">
             <Database className="w-3 h-3 text-emerald-500" />
             <span className="text-emerald-500 font-medium">Database Connected</span>
           </div>
           <div className="flex flex-col items-end mr-2">
-             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Completeness</span>
-             <div className="flex gap-1 mt-1">
-               <div className={cn("w-8 h-1 rounded-full", selectedMain ? "bg-primary" : "bg-muted")}></div>
-               <div className={cn("w-8 h-1 rounded-full", selectedSecondary ? "bg-primary" : "bg-muted")}></div>
-               <div className={cn("w-8 h-1 rounded-full", selectedLinks.length > 2 ? "bg-primary" : "bg-muted")}></div>
-               <div className={cn("w-8 h-1 rounded-full", selectedChallenge ? "bg-primary" : "bg-muted")}></div>
-             </div>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Completeness</span>
+            <div className="flex gap-1 mt-1">
+              <div className={cn("w-8 h-1 rounded-full", selectedMain ? "bg-primary" : "bg-muted")}></div>
+              <div className={cn("w-8 h-1 rounded-full", selectedSecondary ? "bg-primary" : "bg-muted")}></div>
+              <div className={cn("w-8 h-1 rounded-full", selectedLinks.length > 2 ? "bg-primary" : "bg-muted")}></div>
+              <div className={cn("w-8 h-1 rounded-full", selectedChallenge ? "bg-primary" : "bg-muted")}></div>
+            </div>
           </div>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             className="rounded-full px-8 shadow-lg shadow-primary/20"
             onClick={handlePublish}
             disabled={publishMutation.isPending || !selectedMain}
@@ -223,7 +243,7 @@ export default function EditorialDesk() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        
+
         {/* Column 1: The Wire (Source Material) */}
         <aside className="w-[400px] border-r border-border/40 bg-muted/10 flex flex-col shrink-0">
           <div className="p-4 border-b border-border/40 bg-background/50 backdrop-blur z-10 flex justify-between items-center sticky top-0">
@@ -282,7 +302,7 @@ export default function EditorialDesk() {
               </Button>
             </div>
           </div>
-          
+
           <ScrollArea className="flex-1">
             {leadsLoading ? (
               <div className="p-8 text-center text-muted-foreground">
@@ -292,8 +312,8 @@ export default function EditorialDesk() {
             ) : (
               <div className="p-4 space-y-3">
                 {leads.map(lead => (
-                  <div 
-                    key={lead.id} 
+                  <div
+                    key={lead.id}
                     className={cn(
                       "group relative p-4 rounded-xl border transition-all duration-200 bg-card hover:shadow-md",
                       isSelected(lead.id) ? "border-primary/50 bg-primary/5" : "border-border/50 hover:border-primary/20"
@@ -305,11 +325,11 @@ export default function EditorialDesk() {
                       </span>
                       <span className="text-[10px] text-muted-foreground">{lead.relevanceScore}% Match</span>
                     </div>
-                    
+
                     <h3 className="font-display font-medium text-sm leading-snug mb-2 text-foreground/90">
                       {lead.title}
                     </h3>
-                    
+
                     <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-3">
                       {lead.summary}
                     </p>
@@ -333,7 +353,7 @@ export default function EditorialDesk() {
                       >
                         Secondary
                       </Button>
-                       <Button
+                      <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
@@ -364,7 +384,7 @@ export default function EditorialDesk() {
         {/* Column 2: The Issue (Drafting) */}
         <main className="flex-1 flex flex-col min-w-0 bg-background overflow-y-auto">
           <div className="p-8 max-w-3xl mx-auto w-full space-y-8">
-            
+
             <div className="space-y-2">
               <h2 className="text-2xl font-display font-bold tracking-tight">Today's Issue</h2>
               <p className="text-muted-foreground">Curate the stories for the morning briefing.</p>
@@ -377,10 +397,10 @@ export default function EditorialDesk() {
                   <Layout className="w-4 h-4 text-primary" /> Feature Story
                 </label>
                 {selectedMain && (
-                   <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-destructive" onClick={() => setSelectedMain(null)}>Clear</Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-destructive" onClick={() => setSelectedMain(null)}>Clear</Button>
                 )}
               </div>
-              
+
               <div className={cn(
                 "rounded-2xl border-2 border-dashed p-8 transition-all min-h-[200px] flex flex-col justify-center items-center text-center relative overflow-hidden",
                 selectedMain ? "border-primary/20 bg-card" : "border-border/30 bg-muted/5 hover:bg-muted/10 hover:border-primary/30"
@@ -405,18 +425,18 @@ export default function EditorialDesk() {
             </section>
 
             <div className="grid grid-cols-2 gap-8">
-              
+
               {/* Secondary Story Slot */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <FileText className="w-4 h-4 text-primary" /> Secondary Story
                   </label>
-                   {selectedSecondary && (
-                     <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-destructive" onClick={() => setSelectedSecondary(null)}>Clear</Button>
+                  {selectedSecondary && (
+                    <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground hover:text-destructive" onClick={() => setSelectedSecondary(null)}>Clear</Button>
                   )}
                 </div>
-                
+
                 <div className={cn(
                   "rounded-xl border-2 border-dashed p-6 transition-all min-h-[150px] flex flex-col justify-center items-center text-center relative h-full",
                   selectedSecondary ? "border-primary/20 bg-card" : "border-border/30 bg-muted/5 hover:bg-muted/10 hover:border-primary/30"
@@ -432,67 +452,82 @@ export default function EditorialDesk() {
                       <p className="text-sm font-medium">Select secondary</p>
                     </div>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-muted-foreground hover:text-primary"
+                    onClick={() => generateChallengesMutation.mutate()}
+                    disabled={generateChallengesMutation.isPending}
+                  >
+                    {generateChallengesMutation.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    ) : (
+                      <Shuffle className="w-3 h-3 mr-1" />
+                    )}
+                    Shuffle Options
+                  </Button>
                 </div>
-              </section>
 
-              {/* Weekly Challenge Slot */}
-              <section className="space-y-3">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-primary" /> Weekly Challenge
-                </label>
-                 {challengesLoading ? (
-                   <div className="rounded-xl border border-border/50 bg-card p-4 text-center">
-                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
-                   </div>
-                 ) : (
-                   <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
-                     {challenges.map(challenge => (
-                       <div 
+                {challengesLoading || generateChallengesMutation.isPending ? (
+                  <div className="rounded-xl border border-border/50 bg-card p-4 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground mt-2">Generating new challenges...</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+                    {challenges.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        No challenges available. Click Shuffle to generate.
+                      </div>
+                    ) : (
+                      challenges.map(challenge => (
+                        <div
                           key={challenge.id}
                           onClick={() => setSelectedChallenge(challenge)}
                           className={cn(
                             "p-3 rounded-lg cursor-pointer border transition-all hover:shadow-sm",
-                            selectedChallenge?.id === challenge.id 
-                              ? "bg-primary/10 border-primary shadow-sm" 
+                            selectedChallenge?.id === challenge.id
+                              ? "bg-primary/10 border-primary shadow-sm"
                               : "bg-background border-border/50 hover:border-primary/30"
                           )}
-                       >
-                         <div className="flex justify-between items-start">
-                           <h4 className="text-xs font-bold">{challenge.title}</h4>
-                           {selectedChallenge?.id === challenge.id && <Check className="w-3 h-3 text-primary" />}
-                         </div>
-                         <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{challenge.description}</p>
-                       </div>
-                     ))}
-                   </div>
-                 )}
+                        >
+                          <div className="flex justify-between items-start">
+                            <h4 className="text-xs font-bold">{challenge.title}</h4>
+                            {selectedChallenge?.id === challenge.id && <Check className="w-3 h-3 text-primary" />}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{challenge.description}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </section>
             </div>
 
             {/* Quick Links Section */}
             <section className="space-y-3 pt-4">
-               <label className="text-sm font-medium flex items-center gap-2">
-                  <ExternalLink className="w-4 h-4 text-primary" /> Quick Hits ({selectedLinks.length})
-                </label>
-                <div className="grid grid-cols-1 gap-2">
-                  {selectedLinks.length === 0 && (
-                    <div className="text-center p-8 border border-dashed border-border/40 rounded-xl text-muted-foreground/50 text-sm">
-                      Select "Link" on items from the wire to add them here.
+              <label className="text-sm font-medium flex items-center gap-2">
+                <ExternalLink className="w-4 h-4 text-primary" /> Quick Hits ({selectedLinks.length})
+              </label>
+              <div className="grid grid-cols-1 gap-2">
+                {selectedLinks.length === 0 && (
+                  <div className="text-center p-8 border border-dashed border-border/40 rounded-xl text-muted-foreground/50 text-sm">
+                    Select "Link" on items from the wire to add them here.
+                  </div>
+                )}
+                {selectedLinks.map(link => (
+                  <div key={link.id} className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-card/50">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                      <span className="font-medium text-sm truncate">{link.title}</span>
+                      <span className="text-xs text-muted-foreground shrink-0 border-l border-border/50 pl-3 ml-1">{link.source}</span>
                     </div>
-                  )}
-                  {selectedLinks.map(link => (
-                    <div key={link.id} className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-card/50">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                        <span className="font-medium text-sm truncate">{link.title}</span>
-                        <span className="text-xs text-muted-foreground shrink-0 border-l border-border/50 pl-3 ml-1">{link.source}</span>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => toggleLink(link)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => toggleLink(link)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </section>
 
           </div>

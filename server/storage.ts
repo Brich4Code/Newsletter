@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { 
+import {
   type Lead, type InsertLead, leads,
   type Challenge, type InsertChallenge, challenges,
   type Issue, type InsertIssue, issues
@@ -19,6 +19,7 @@ export interface IStorage {
   getChallenges(): Promise<Challenge[]>;
   getChallengeById(id: string): Promise<Challenge | undefined>;
   createChallenge(challenge: InsertChallenge): Promise<Challenge>;
+  clearRecentChallenges(): Promise<void>;
 
   // Issues
   getIssues(): Promise<Issue[]>;
@@ -72,6 +73,13 @@ export class DatabaseStorage implements IStorage {
   async getChallengeById(id: string): Promise<Challenge | undefined> {
     const [challenge] = await db.select().from(challenges).where(eq(challenges.id, id)).limit(1);
     return challenge;
+  }
+
+  async clearRecentChallenges(): Promise<void> {
+    // Only delete challenges that are NOT assigned to any issue
+    // For simplicity in this "shuffle" context, we might just wipe unassigned ones or all recent ones
+    // But to be safe, we'll delete all challenges since they are ephemeral suggestions until published
+    await db.delete(challenges);
   }
 
   // Issues

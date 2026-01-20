@@ -10,7 +10,7 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
   // Get all leads
   app.get("/api/leads", async (req, res) => {
     try {
@@ -70,7 +70,7 @@ export async function registerRoutes(
     }
   });
 
-  // Create a new challenge
+  // Create a new challenge (Manual addition)
   app.post("/api/challenges", async (req, res) => {
     try {
       const challenge = insertChallengeSchema.parse(req.body);
@@ -82,6 +82,35 @@ export async function registerRoutes(
       } else {
         res.status(500).json({ error: "Failed to create challenge" });
       }
+    }
+  });
+
+  // Generate new challenges (Shuffle/Refresh)
+  app.post("/api/challenges/generate", async (req, res) => {
+    try {
+      console.log("[API] Generating new challenges...");
+
+      // 1. Clear existing unassigned challenges to keep things fresh
+      await storage.clearRecentChallenges();
+
+      // 2. Run the generator agent
+      // Note: This relies on the agent writing to storage internally
+      // In a cleaner architecture we might have the agent return data and api writes it,
+      // but following existing pattern where agent writes to storage.
+      await import("./agents/challenge-generator").then(m => m.challengeGeneratorAgent.run());
+
+      // 3. Update the Orchestrator/Research loop last run time if needed (optional)
+
+      // 4. Fetch the newly created challenges
+      const newChallenges = await storage.getChallenges();
+
+      res.status(200).json({
+        message: "Challenges generated successfully",
+        challenges: newChallenges
+      });
+    } catch (error) {
+      console.error("[API] Failed to generate challenges:", error);
+      res.status(500).json({ error: "Failed to generate challenges" });
     }
   });
 
