@@ -452,6 +452,15 @@ export default function EditorialDesk() {
                       <p className="text-sm font-medium">Select secondary</p>
                     </div>
                   )}
+                </div>
+              </section>
+
+              {/* Weekly Challenge Slot */}
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-primary" /> Weekly Challenge
+                  </label>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -469,15 +478,17 @@ export default function EditorialDesk() {
                 </div>
 
                 {challengesLoading || generateChallengesMutation.isPending ? (
-                  <div className="rounded-xl border border-border/50 bg-card p-4 text-center">
+                  <div className="rounded-xl border border-border/50 bg-card p-4 text-center min-h-[200px] flex flex-col items-center justify-center">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
                     <p className="text-xs text-muted-foreground mt-2">Generating new challenges...</p>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+                  <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3 min-h-[200px]">
                     {challenges.length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground text-sm">
-                        No challenges available. Click Shuffle to generate.
+                      <div className="text-center py-4 text-muted-foreground text-sm flex flex-col items-center justify-center h-full">
+                        <Trophy className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                        <p>No challenges available.</p>
+                        <p className="text-xs mt-1">Click Shuffle to generate.</p>
                       </div>
                     ) : (
                       challenges.map(challenge => (
