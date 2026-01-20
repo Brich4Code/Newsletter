@@ -330,7 +330,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
 
     let draft = await geminiService.generateWithPro(writePrompt, {
       temperature: 0.5, // Lower temp to reduce URL hallucination (was 0.8)
-      maxTokens: 16384, // Increased from 8192 to ensure full newsletter fits
+      maxTokens: 25600, // Increased to 25K to prevent cutoff (was 16384)
     });
 
     // Extract markdown from code block if present
