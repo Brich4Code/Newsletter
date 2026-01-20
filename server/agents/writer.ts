@@ -239,7 +239,7 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
 
   /**
    * Condense Perplexity research to key facts only
-   * Reduces token usage by 60-70% while preserving essential information
+   * Reduces token usage by ~40-50% while preserving essential information
    */
   private async condenseResearch(
     category: string,
@@ -252,18 +252,19 @@ RESEARCH:
 ${fullAnswer}
 
 OUTPUT FORMAT:
-Return a bulleted list of key facts (max 5-8 bullets). Include:
+Return a bulleted list of key facts (max 10-12 bullets). Include:
 - Specific statistics/numbers with context
 - Direct quotes from key people (if any)
 - Important dates and events
 - Core claims and findings
+- Key background information necessary for understanding
 
-Remove fluff, repetition, and background context. Keep it under 150 words total.`;
+Remove fluff and excessive repetition. Keep it under 500 words total.`;
 
     try {
       const condensed = await geminiService.generateWithPro(condensPrompt, {
         temperature: 0.2, // Very low for factual extraction
-        maxTokens: 500, // Short output
+        maxTokens: 1500, // Enough for ~500 words
       });
 
       return {
@@ -272,9 +273,9 @@ Remove fluff, repetition, and background context. Keep it under 150 words total.
         citations,
       };
     } catch (error) {
-      // Fallback: use first 150 words of original if condensing fails
+      // Fallback: use first 500 words of original if condensing fails
       log(`[Writer] Failed to condense ${category}, using truncated original`, "agent");
-      const words = fullAnswer.split(/\s+/).slice(0, 150).join(' ');
+      const words = fullAnswer.split(/\s+/).slice(0, 500).join(' ');
       return {
         category,
         condensed: words + '...',
