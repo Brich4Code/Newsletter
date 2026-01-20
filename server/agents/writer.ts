@@ -232,7 +232,9 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
 
     const fullResearch = researchSections.join('\n') + '\n' + urlBank;
 
+    const totalResearchWords = fullResearch.split(/\s+/).length;
     log(`[Writer] Research complete. Found ${results.reduce((sum, r) => sum + r.citations.length, 0)} verified URLs`, "agent");
+    log(`[Writer] Total research length: ${totalResearchWords} words (~${Math.ceil(totalResearchWords * 1.3)} tokens)`, "agent");
 
     return fullResearch;
   }
@@ -266,6 +268,9 @@ Remove fluff and excessive repetition. Keep it under 500 words total.`;
         temperature: 0.2, // Very low for factual extraction
         maxTokens: 1500, // Enough for ~500 words
       });
+
+      const wordCount = condensed.trim().split(/\s+/).length;
+      log(`[Writer] ${category} condensed to ${wordCount} words (from ${fullAnswer.split(/\s+/).length} words)`, "agent");
 
       return {
         category,
@@ -388,10 +393,14 @@ CRITICAL OUTPUT INSTRUCTIONS:
       maxTokens: 51200, // Increased to 50K with condensed input (was 25.6K)
     });
 
+    const rawDraftLength = draft.length;
+    log(`[Writer] Raw draft from Gemini: ${rawDraftLength} chars (${draft.split(/\s+/).length} words)`, "agent");
+
     // Extract markdown from code block if present
     const match = draft.match(/```markdown\n([\s\S]*?)\n?```/);
     if (match) {
       draft = match[1];
+      log(`[Writer] Extracted from markdown code block`, "agent");
     } else {
       // Fallback: strip any leading conversational text
       const possibleStarts = ["Subject Line", "Welcome to Jumble", "# "];
@@ -406,8 +415,11 @@ CRITICAL OUTPUT INSTRUCTIONS:
 
       if (earliestStart > 0) {
         draft = draft.substring(earliestStart);
+        log(`[Writer] Stripped leading text, started at position ${earliestStart}`, "agent");
       }
     }
+
+    log(`[Writer] Final extracted draft: ${draft.length} chars (${draft.split(/\s+/).length} words)`, "agent");
 
     return draft;
   }
@@ -420,6 +432,8 @@ CRITICAL OUTPUT INSTRUCTIONS:
   private async validateAndFixWordCounts(draft: string): Promise<string> {
     // Extract main and secondary story sections
     const sections = this.extractStorySections(draft);
+
+    log(`[Writer] Extracted sections - Main: ${sections.mainStory ? 'YES' : 'NO'}, Secondary: ${sections.secondaryStory ? 'YES' : 'NO'}`, "agent");
 
     if (!sections.mainStory && !sections.secondaryStory) {
       log("[Writer] Could not extract story sections for word count validation", "agent");
