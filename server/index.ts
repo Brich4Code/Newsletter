@@ -10,15 +10,26 @@ import pg from "pg";
 const app = express();
 const httpServer = createServer(app);
 
-// Session store setup
+// Session store setup with error handling
 const PgStore = connectPgSimple(session);
-const sessionPool = new pg.Pool({
-  connectionString: process.env.SUPABASE_DATA_STORAGE || process.env.DATABASE_URL,
-});
+const dbConnectionString = process.env.SUPABASE_DATA_STORAGE || process.env.DATABASE_URL;
 
-// Session middleware
-app.use(
-  session({
+let sessionMiddleware: express.RequestHandler;
+
+if (dbConnectionString) {
+  const sessionPool = new pg.Pool({
+    connectionString: dbConnectionString,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  // Handle pool errors to prevent crash
+  sessionPool.on("error", (err) => {
+    console.error("[Session Pool] Unexpected error:", err.message);
+  });
+
+  sessionMiddleware = session({
     store: new PgStore({
       pool: sessionPool,
       tableName: "user_sessions",
@@ -32,8 +43,23 @@ app.use(
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
-  })
-);
+  });
+} else {
+  // Fallback to memory store if no database URL (for local dev without DB)
+  console.warn("[Session] No DATABASE_URL found, using memory session store");
+  sessionMiddleware = session({
+    secret: process.env.SESSION_SECRET || "hello-jumble-secret-key-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false,
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  });
+}
+
+app.use(sessionMiddleware);
 
 declare module "http" {
   interface IncomingMessage {
