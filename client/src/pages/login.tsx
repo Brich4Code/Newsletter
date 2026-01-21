@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 import { checkSetupRequired, setupAdmin, login, getSession } from "../lib/api";
 
 export default function LoginPage() {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export default function LoginPage() {
         // First check if already logged in
         const session = await getSession();
         if (session.authenticated) {
-          navigate("/");
+          setLocation("/");
           return;
         }
 
@@ -34,7 +34,7 @@ export default function LoginPage() {
     }
 
     checkAuth();
-  }, [navigate]);
+  }, [setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +64,7 @@ export default function LoginPage() {
       }
 
       // Navigate to main app
-      navigate("/");
+      setLocation("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
