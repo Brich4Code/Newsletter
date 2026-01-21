@@ -8,6 +8,7 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 
 const app = express();
+app.set("trust proxy", 1); // Trust first proxy for secure cookies
 const httpServer = createServer(app);
 
 // Session store setup with error handling

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { checkSetupRequired, setupAdmin, login, getSession } from "../lib/api";
+import { useAuth } from "../App";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -44,6 +45,9 @@ export default function LoginPage() {
     checkAuth();
   }, [setLocation]);
 
+  // Get refreshAuth from context
+  const { refreshAuth } = useAuth();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -70,6 +74,9 @@ export default function LoginPage() {
         // Login
         await login(username, password);
       }
+
+      // Refresh auth state before navigating
+      await refreshAuth();
 
       // Navigate to main app
       setLocation("/");
@@ -177,8 +184,8 @@ export default function LoginPage() {
               {isSubmitting
                 ? "Please wait..."
                 : isSetupMode
-                ? "Create Account"
-                : "Sign In"}
+                  ? "Create Account"
+                  : "Sign In"}
             </button>
           </form>
 
