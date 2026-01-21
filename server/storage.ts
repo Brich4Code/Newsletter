@@ -12,6 +12,7 @@ export interface IStorage {
   getLeadById(id: string): Promise<Lead | undefined>;
   getLeadsByIds(ids: string[]): Promise<Lead[]>;
   createLead(lead: InsertLead): Promise<Lead>;
+  updateLead(id: string, updates: Partial<Lead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
   deleteAllLeads(): Promise<number>;
 
@@ -47,6 +48,15 @@ export class DatabaseStorage implements IStorage {
   async getLeadsByIds(ids: string[]): Promise<Lead[]> {
     if (ids.length === 0) return [];
     return db.select().from(leads).where(eq(leads.id, ids[0])); // TODO: Fix for multiple IDs
+  }
+
+  async updateLead(id: string, updates: Partial<Lead>): Promise<Lead> {
+    const [updatedLead] = await db
+      .update(leads)
+      .set(updates)
+      .where(eq(leads.id, id))
+      .returning();
+    return updatedLead;
   }
 
   async deleteLead(id: string): Promise<void> {
