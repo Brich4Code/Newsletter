@@ -128,3 +128,74 @@ export async function updateLeadNote(id: string, note: string): Promise<Lead> {
 
   return response.json();
 }
+
+// Auth API functions
+export interface AuthUser {
+  id: string;
+  username: string;
+}
+
+export interface SessionResponse {
+  authenticated: boolean;
+  user?: AuthUser;
+}
+
+export async function checkSetupRequired(): Promise<{ setupRequired: boolean }> {
+  const response = await fetch(`${API_BASE}/auth/setup-required`);
+  if (!response.ok) {
+    throw new Error("Failed to check setup status");
+  }
+  return response.json();
+}
+
+export async function setupAdmin(username: string, password: string): Promise<{ user: AuthUser }> {
+  const response = await fetch(`${API_BASE}/auth/setup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create admin user");
+  }
+
+  return response.json();
+}
+
+export async function login(username: string, password: string): Promise<{ user: AuthUser }> {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Login failed");
+  }
+
+  return response.json();
+}
+
+export async function logout(): Promise<void> {
+  const response = await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("Logout failed");
+  }
+}
+
+export async function getSession(): Promise<SessionResponse> {
+  const response = await fetch(`${API_BASE}/auth/session`);
+  if (!response.ok) {
+    throw new Error("Failed to get session");
+  }
+  return response.json();
+}

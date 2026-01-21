@@ -1,18 +1,128 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertChallengeSchema, insertIssueSchema } from "@shared/schema";
 import { z } from "zod";
 import { publicationPipeline } from "./orchestrator/publication-pipeline";
 import { researchOrchestrator } from "./orchestrator/research-loop";
+import { authenticateUser, createPasswordHash, hasUsers } from "./auth";
+
+// Auth middleware to protect routes
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (req.session?.userId) {
+    next();
+  } else {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
 
+  // ==================== AUTH ROUTES ====================
+
+  // Check if setup is needed (no users exist)
+  app.get("/api/auth/setup-required", async (req, res) => {
+    try {
+      const usersExist = await hasUsers();
+      res.json({ setupRequired: !usersExist });
+    } catch (error) {
+      console.error("[API] Setup check error:", error);
+      res.status(500).json({ error: "Failed to check setup status" });
+    }
+  });
+
+  // Initial setup - create admin user (only works if no users exist)
+  app.post("/api/auth/setup", async (req, res) => {
+    try {
+      const usersExist = await hasUsers();
+      if (usersExist) {
+        return res.status(403).json({ error: "Setup already completed" });
+      }
+
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+
+      const passwordHash = createPasswordHash(password);
+      const user = await storage.createUser({ username, passwordHash });
+
+      // Auto-login after setup
+      req.session.userId = user.id;
+      req.session.username = user.username;
+
+      res.status(201).json({
+        message: "Admin user created successfully",
+        user: { id: user.id, username: user.username }
+      });
+    } catch (error) {
+      console.error("[API] Setup error:", error);
+      res.status(500).json({ error: "Failed to create admin user" });
+    }
+  });
+
+  // Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password required" });
+      }
+
+      const user = await authenticateUser(username, password);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+
+      // Set session
+      req.session.userId = user.id;
+      req.session.username = user.username;
+
+      res.json({
+        message: "Login successful",
+        user: { id: user.id, username: user.username }
+      });
+    } catch (error) {
+      console.error("[API] Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("[API] Logout error:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Get current session
+  app.get("/api/auth/session", (req, res) => {
+    if (req.session?.userId) {
+      res.json({
+        authenticated: true,
+        user: { id: req.session.userId, username: req.session.username }
+      });
+    } else {
+      res.json({ authenticated: false });
+    }
+  });
+
+  // ==================== PROTECTED API ROUTES ====================
+
   // Get all leads
-  app.get("/api/leads", async (req, res) => {
+  app.get("/api/leads", requireAuth, async (req, res) => {
     try {
       const leads = await storage.getLeads();
       res.json(leads);
@@ -22,7 +132,7 @@ export async function registerRoutes(
   });
 
   // Create a new lead
-  app.post("/api/leads", async (req, res) => {
+  app.post("/api/leads", requireAuth, async (req, res) => {
     try {
       const lead = insertLeadSchema.parse(req.body);
       const newLead = await storage.createLead(lead);
@@ -37,7 +147,7 @@ export async function registerRoutes(
   });
 
   // Update a lead (for adding notes)
-  app.patch("/api/leads/:id", async (req, res) => {
+  app.patch("/api/leads/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -50,7 +160,7 @@ export async function registerRoutes(
   });
 
   // Delete all leads (must be before :id route to match correctly)
-  app.delete("/api/leads", async (req, res) => {
+  app.delete("/api/leads", requireAuth, async (req, res) => {
     try {
       console.log("[API] DELETE /api/leads called");
       const count = await storage.deleteAllLeads();
@@ -63,7 +173,7 @@ export async function registerRoutes(
   });
 
   // Delete a lead
-  app.delete("/api/leads/:id", async (req, res) => {
+  app.delete("/api/leads/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteLead(id);
@@ -74,7 +184,7 @@ export async function registerRoutes(
   });
 
   // Get all challenges
-  app.get("/api/challenges", async (req, res) => {
+  app.get("/api/challenges", requireAuth, async (req, res) => {
     try {
       const challenges = await storage.getChallenges();
       res.json(challenges);
@@ -84,7 +194,7 @@ export async function registerRoutes(
   });
 
   // Create a new challenge (Manual addition)
-  app.post("/api/challenges", async (req, res) => {
+  app.post("/api/challenges", requireAuth, async (req, res) => {
     try {
       const challenge = insertChallengeSchema.parse(req.body);
       const newChallenge = await storage.createChallenge(challenge);
@@ -99,7 +209,7 @@ export async function registerRoutes(
   });
 
   // Generate new challenges (Shuffle/Refresh)
-  app.post("/api/challenges/generate", async (req, res) => {
+  app.post("/api/challenges/generate", requireAuth, async (req, res) => {
     try {
       console.log("[API] Generating new challenges...");
 
@@ -128,7 +238,7 @@ export async function registerRoutes(
   });
 
   // Get all issues
-  app.get("/api/issues", async (req, res) => {
+  app.get("/api/issues", requireAuth, async (req, res) => {
     try {
       const issues = await storage.getIssues();
       res.json(issues);
@@ -138,7 +248,7 @@ export async function registerRoutes(
   });
 
   // Trigger research cycle manually
-  app.post("/api/research/start", async (req, res) => {
+  app.post("/api/research/start", requireAuth, async (req, res) => {
     try {
       // Trigger research in background
       researchOrchestrator.runCycle().then(() => {
@@ -157,7 +267,7 @@ export async function registerRoutes(
   });
 
   // Publish a new issue
-  app.post("/api/issues/publish", async (req, res) => {
+  app.post("/api/issues/publish", requireAuth, async (req, res) => {
     try {
       const issueData = insertIssueSchema.parse(req.body);
 

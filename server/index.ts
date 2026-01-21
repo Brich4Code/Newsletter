@@ -1,15 +1,51 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { researchOrchestrator } from "./orchestrator/research-loop";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 
 const app = express();
 const httpServer = createServer(app);
 
+// Session store setup
+const PgStore = connectPgSimple(session);
+const sessionPool = new pg.Pool({
+  connectionString: process.env.SUPABASE_DATA_STORAGE || process.env.DATABASE_URL,
+});
+
+// Session middleware
+app.use(
+  session({
+    store: new PgStore({
+      pool: sessionPool,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+    }),
+    secret: process.env.SESSION_SECRET || "hello-jumble-secret-key-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    },
+  })
+);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
+  }
+}
+
+// Extend express-session types
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+    username: string;
   }
 }
 

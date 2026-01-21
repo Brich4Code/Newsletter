@@ -19,11 +19,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2, Shuffle, Plus, StickyNote, Menu, X, PenLine } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2, Shuffle, Plus, StickyNote, Menu, X, PenLine, LogOut } from "lucide-react";
 import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/App";
 
 export default function EditorialDesk() {
+  const { user, logout } = useAuth();
   const [selectedMain, setSelectedMain] = useState<Lead | null>(null);
   const [selectedSecondary, setSelectedSecondary] = useState<Lead | null>(null);
   const [selectedLinks, setSelectedLinks] = useState<Lead[]>([]);
@@ -356,6 +358,21 @@ export default function EditorialDesk() {
             <Database className="w-3 h-3 text-emerald-500" />
             <span className="text-emerald-500 font-medium">Connected</span>
           </div>
+          {user && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              onClick={async () => {
+                await logout();
+                window.location.href = "/login";
+              }}
+              title={`Logged in as ${user.username}`}
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden lg:inline">Logout</span>
+            </Button>
+          )}
           <div className="hidden sm:flex flex-col items-end mr-2">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Progress</span>
             <div className="flex gap-1 mt-1">

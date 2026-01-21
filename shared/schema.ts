@@ -99,3 +99,19 @@ export const insertNewsletterBacklogSchema = createInsertSchema(newsletterBacklo
 
 export type InsertNewsletterBacklog = z.infer<typeof insertNewsletterBacklogSchema>;
 export type NewsletterBacklog = typeof newsletterBacklog.$inferSelect;
+
+// Users table for authentication
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;

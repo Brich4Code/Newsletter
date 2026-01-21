@@ -2,7 +2,8 @@ import { db } from "./db";
 import {
   type Lead, type InsertLead, leads,
   type Challenge, type InsertChallenge, challenges,
-  type Issue, type InsertIssue, issues
+  type Issue, type InsertIssue, issues,
+  type User, type InsertUser, users
 } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -27,6 +28,12 @@ export interface IStorage {
   getLatestIssue(): Promise<Issue | undefined>;
   createIssue(issue: InsertIssue): Promise<Issue>;
   updateIssue(id: string, updates: Partial<Issue>): Promise<Issue>;
+
+  // Users
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  getUserCount(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -118,6 +125,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(issues.id, id))
       .returning();
     return updatedIssue;
+  }
+
+  // Users
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return user;
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async getUserCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+    return Number(result[0]?.count ?? 0);
   }
 }
 
