@@ -13,6 +13,8 @@ export const leads = pgTable("leads", {
   embedding: vector("embedding", { dimensions: 768 }),
   factCheckStatus: text("fact_check_status").default("pending"),
   primarySourceUrl: text("primary_source_url"),
+  note: text("note"), // Editorial note to guide LLM when writing about this story
+  isManual: boolean("is_manual").default(false), // Whether this was manually added
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

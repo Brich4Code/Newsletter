@@ -36,6 +36,19 @@ export async function registerRoutes(
     }
   });
 
+  // Update a lead (for adding notes)
+  app.patch("/api/leads/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const updatedLead = await storage.updateLead(id, updates);
+      res.status(200).json(updatedLead);
+    } catch (error) {
+      console.error("[API] Update lead error:", error);
+      res.status(500).json({ error: "Failed to update lead" });
+    }
+  });
+
   // Delete all leads (must be before :id route to match correctly)
   app.delete("/api/leads", async (req, res) => {
     try {

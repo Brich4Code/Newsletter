@@ -84,3 +84,47 @@ export async function deleteAllLeads(): Promise<{ success: boolean; count: numbe
 
   return response.json();
 }
+
+export async function createLead(lead: {
+  title: string;
+  source: string;
+  url: string;
+  summary: string;
+  relevanceScore?: number;
+  note?: string;
+  isManual?: boolean;
+}): Promise<Lead> {
+  const response = await fetch(`${API_BASE}/leads`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ...lead,
+      relevanceScore: lead.relevanceScore ?? 100,
+      isManual: lead.isManual ?? true,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create lead");
+  }
+
+  return response.json();
+}
+
+export async function updateLeadNote(id: string, note: string): Promise<Lead> {
+  const response = await fetch(`${API_BASE}/leads/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ note }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update lead note");
+  }
+
+  return response.json();
+}
