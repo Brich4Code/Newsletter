@@ -349,7 +349,7 @@ export default function EditorialDesk() {
           </div>
           <div className="hidden sm:block">
             <h1 className="font-display font-bold text-lg tracking-tight leading-none">Editorial Desk</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Hello Jumble Newsroom</p>
+            <p className="text-xs text-muted-foreground mt-0.5">AI Newsroom</p>
           </div>
         </div>
 
