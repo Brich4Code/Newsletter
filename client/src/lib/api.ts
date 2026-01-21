@@ -46,8 +46,24 @@ export async function publishIssue(issue: InsertIssue): Promise<Issue> {
   return response.json();
 }
 
-export async function startResearch(): Promise<{ status: string; message: string }> {
+export async function startResearch(mode: "standard" | "deep-dive" = "standard"): Promise<{ status: string; message: string }> {
   const response = await fetch(`${API_BASE}/research/start`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ mode }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to start research");
+  }
+
+  return response.json();
+}
+
+export async function startDeepDiveResearch(): Promise<{ status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/research/deep-dive`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -55,7 +71,7 @@ export async function startResearch(): Promise<{ status: string; message: string
   });
 
   if (!response.ok) {
-    throw new Error("Failed to start research");
+    throw new Error("Failed to start Deep Dive research");
   }
 
   return response.json();

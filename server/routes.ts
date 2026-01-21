@@ -252,19 +252,43 @@ export async function registerRoutes(
   // Trigger research cycle manually
   app.post("/api/research/start", requireAuth, async (req, res) => {
     try {
+      const { mode } = req.body;
+      const researchMode = mode === "deep-dive" ? "deep-dive" : "standard";
+
       // Trigger research in background
-      researchOrchestrator.runCycle().then(() => {
-        console.log("[API] Research cycle completed");
+      researchOrchestrator.runCycle(researchMode).then(() => {
+        console.log(`[API] Research cycle completed (${researchMode})`);
       }).catch((error) => {
         console.error("[API] Research cycle failed:", error);
       });
 
       res.status(200).json({
         status: "started",
+        mode: researchMode,
         message: "Research agents are now finding stories. This will take 2-5 minutes.",
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to start research" });
+    }
+  });
+
+  // Deep Dive Research Endpoint (Trend Scout)
+  app.post("/api/research/deep-dive", requireAuth, async (req, res) => {
+    try {
+      // Trigger research in background
+      researchOrchestrator.runCycle("deep-dive").then(() => {
+        console.log("[API] Deep Dive research cycle completed");
+      }).catch((error) => {
+        console.error("[API] Deep Dive research cycle failed:", error);
+      });
+
+      res.status(200).json({
+        status: "started",
+        mode: "deep-dive",
+        message: "Deep Dive Trend Scout started. Identifying trends and finding stories...",
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to start Deep Dive research" });
     }
   });
 
