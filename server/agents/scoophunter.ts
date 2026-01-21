@@ -1,4 +1,5 @@
 import { geminiService } from "../services/gemini";
+import { perplexityService } from "../services/perplexity";
 import { vectorSearchService } from "../services/vector-search";
 import { storage } from "../storage";
 import { log } from "../index";
@@ -167,17 +168,45 @@ export class ScoopHunterAgent {
   /**
    * Generate dynamic search queries based on current trends (Deep Dive Mode)
    */
+  /**
+   * Generate dynamic search queries based on current trends (Deep Dive Mode)
+   * Uses Perplexity for real-time discovery, then Gemini for query formatting
+   */
   private async generateTrendQueries(dateFilter: string): Promise<string[]> {
-    log("[ScoopHunter] identifying current trends for Deep Dive...", "agent");
+    log("[ScoopHunter] Identifying current trends for Deep Dive via Perplexity...", "agent");
+    const today = new Date().toISOString().split('T')[0];
 
-    const prompt = `Identify 3-5 specific, fast-rising trends or major events in Artificial Intelligence from the last 7 days.
+    // Step 1: Get raw trend info from Perplexity (Live Web Search)
+    // We explicitly ask for "fresh" news to avoid 2024 hallucinations
+    const perplexityPrompt = `List 5 specific, fast-rising AI trends or major news events from the LAST 7 DAYS (Today is ${today}).
     Focus on:
     - Unexpected geopolitical AI news (e.g., China, EU, Middle East)
-    - Specific company breakthroughs or crises NOT covered by generic searches
+    - Specific company breakthroughs (DeepSeek, OpenAI, Anthropic, etc.)
     - Niche but high-impact research
     - Cultural shifts or viral AI moments
     
-    Exclude: Generic "AI is growing" or "AI in healthcare" broad topics. Focus on EVENTS.
+    Give concrete details, names, and dates.
+    DO NOT list generic trends like "AI in healthcare". Give me ACTUAL NEWS EVENTS.`;
+
+    let trendContext = "";
+    try {
+      const perplexityResult = await perplexityService.research(perplexityPrompt);
+      trendContext = perplexityResult.answer;
+      log(`[ScoopHunter] Perplexity found trends: ${trendContext.substring(0, 200)}...`, "agent");
+    } catch (e) {
+      log(`[ScoopHunter] Perplexity trend search failed: ${e}`, "agent");
+      // Fallback if Perplexity fails: use a generic broad search query for Gemini Grounded
+      return [`significant AI news events ${dateFilter}`, `unexpected AI breakthrough ${dateFilter}`];
+    }
+
+    // Step 2: Parser Perplexity's context into clean search queries
+    const parsingPrompt = `You are a search query generator.
+    Based on the following REAL-TIME news summary, generate 3-5 targeted Google search queries to find full articles.
+
+    NEWS SUMMARY (Source: Perplexity Live Search):
+    ${trendContext}
+
+    TODAY'S DATE: ${today}
     
     Return JSON:
     {
@@ -186,8 +215,8 @@ export class ScoopHunterAgent {
         "Description of trend 2"
       ],
       "searchQueries": [
-        "Specific search query for trend 1",
-        "Specific search query for trend 2"
+        "Specific search query matching the trend",
+        "Another specific query"
       ]
     }`;
 
@@ -195,16 +224,16 @@ export class ScoopHunterAgent {
       const response = await geminiService.generateJSON<{
         trends: string[];
         searchQueries: string[];
-      }>(prompt);
+      }>(parsingPrompt);
 
       log(`[ScoopHunter] Identified trends: ${response.trends.join(", ")}`, "agent");
 
       // Append date filter to dynamic queries
       return response.searchQueries.map(q => `${q} ${dateFilter}`);
     } catch (error) {
-      log(`[ScoopHunter] Failed to generate trend queries: ${error}`, "agent");
-      // Fallback to a generic "what happened in AI" query if generation fails
-      return [`significant AI news events ${dateFilter}`, `unexpected AI breakthrough ${dateFilter}`];
+      log(`[ScoopHunter] Failed to generate json queries from trend context: ${error}`, "agent");
+      // Fallback
+      return [`recent AI news ${dateFilter}`];
     }
   }
 
