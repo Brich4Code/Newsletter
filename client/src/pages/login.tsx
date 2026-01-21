@@ -22,12 +22,20 @@ export default function LoginPage() {
           setLocation("/");
           return;
         }
+      } catch (err) {
+        console.error("Session check failed:", err);
+        // Continue to check setup - session check failing is ok
+      }
 
+      try {
         // Check if setup is required
         const { setupRequired } = await checkSetupRequired();
+        console.log("Setup required:", setupRequired);
         setIsSetupMode(setupRequired);
       } catch (err) {
-        console.error("Auth check failed:", err);
+        console.error("Setup check failed:", err);
+        // Default to setup mode if we can't check - safer option
+        setIsSetupMode(true);
       } finally {
         setIsLoading(false);
       }
