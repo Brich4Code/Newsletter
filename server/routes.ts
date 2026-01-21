@@ -64,8 +64,10 @@ export async function registerRoutes(
       });
     } catch (error) {
       console.error("[API] Setup error:", error);
-      res.status(500).json({ error: "Failed to create admin user" });
+      const message = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: `Failed to create admin user: ${message}` });
     }
+
   });
 
   // Login
