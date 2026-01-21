@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, generateChallenges, publishIssue, startResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
+import { fetchLeads, fetchChallenges, generateChallenges, publishIssue, startResearch, startDeepDiveResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -62,11 +62,11 @@ export default function EditorialDesk() {
 
   // Research mutation
   const researchMutation = useMutation({
-    mutationFn: startResearch,
+    mutationFn: () => startResearch("standard"),
     onSuccess: () => {
       toast({
-        title: "Research Started!",
-        description: "Agents are finding stories. Refresh in 2-5 minutes to see new leads.",
+        title: "Standard Research Started!",
+        description: "Reviewing last 7 days of news. Refresh in 2-5 minutes.",
       });
       // Refetch leads after a delay to show new results
       setTimeout(() => {
@@ -77,6 +77,28 @@ export default function EditorialDesk() {
       toast({
         title: "Research Failed",
         description: "There was an error starting research. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Deep Dive mutation
+  const deepDiveMutation = useMutation({
+    mutationFn: startDeepDiveResearch,
+    onSuccess: () => {
+      toast({
+        title: "Trend Scout Started!",
+        description: "Identifying trends and finding stories. This takes 3-5 minutes.",
+      });
+      // Refetch leads after a delay
+      setTimeout(() => {
+        refetchLeads();
+      }, 150000); // 2.5 minutes
+    },
+    onError: () => {
+      toast({
+        title: "Deep Dive Failed",
+        description: "There was an error starting the deep dive. Please try again.",
         variant: "destructive",
       });
     },
@@ -537,7 +559,7 @@ export default function EditorialDesk() {
                 variant="default"
                 size="sm"
                 onClick={() => researchMutation.mutate()}
-                disabled={researchMutation.isPending}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending}
                 className="bg-primary text-primary-foreground flex-1 sm:flex-none"
               >
                 {researchMutation.isPending ? (
@@ -547,6 +569,26 @@ export default function EditorialDesk() {
                   </>
                 ) : (
                   "Find Stories"
+                )}
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => deepDiveMutation.mutate()}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending}
+                className="flex-1 sm:flex-none bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white border-indigo-500"
+              >
+                {deepDiveMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-1 w-3 h-3 animate-spin" />
+                    Scouting...
+                  </>
+                ) : (
+                  <>
+                    <Trophy className="mr-1 w-3 h-3" />
+                    Trend Scout
+                  </>
                 )}
               </Button>
               <Button

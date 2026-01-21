@@ -42,7 +42,7 @@ export class ResearchOrchestrator {
   /**
    * Run a single research cycle
    */
-  async runCycle(): Promise<void> {
+  async runCycle(mode: "standard" | "deep-dive" = "standard"): Promise<void> {
     if (this.isRunning) {
       log("[Orchestrator] Research cycle already running, skipping", "orchestrator");
       return;
@@ -51,12 +51,12 @@ export class ResearchOrchestrator {
     this.isRunning = true;
     const startTime = Date.now();
 
-    log("[Orchestrator] ━━━ Starting Research Cycle ━━━", "orchestrator");
+    log(`[Orchestrator] ━━━ Starting Research Cycle (${mode}) ━━━`, "orchestrator");
 
     try {
       // 1. Research new leads
       log("[Orchestrator] Phase 1: Searching for news...", "orchestrator");
-      await scoopHunterAgent.run();
+      await scoopHunterAgent.run(mode);
 
       // 2. Generate challenges (only on Mondays)
       if (this.shouldGenerateChallenges()) {
@@ -90,9 +90,9 @@ export class ResearchOrchestrator {
   /**
    * Manually trigger a research cycle (for testing/admin)
    */
-  async triggerManualCycle(): Promise<void> {
-    log("[Orchestrator] Manual research cycle triggered", "orchestrator");
-    await this.runCycle();
+  async triggerManualCycle(mode: "standard" | "deep-dive" = "standard"): Promise<void> {
+    log(`[Orchestrator] Manual research cycle triggered (${mode})`, "orchestrator");
+    await this.runCycle(mode);
   }
 }
 

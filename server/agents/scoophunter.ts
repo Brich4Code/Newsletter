@@ -47,34 +47,45 @@ export class ScoopHunterAgent {
     return this.ROUNDUP_PATTERNS.some(pattern => pattern.test(title));
   }
 
-  async run(): Promise<void> {
-    log("[ScoopHunter] Starting research cycle...", "agent");
+  async run(mode: "standard" | "deep-dive" = "standard"): Promise<void> {
+    log(`[ScoopHunter] Starting research cycle in ${mode} mode...`, "agent");
 
     try {
-      // Get current date for recent news searches
+      // Calculate date filter (last 7 days)
       const today = new Date();
-      const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      const dateFilter = `after:${sevenDaysAgo.toISOString().split('T')[0]}`;
 
-      // 1. Search for specific AI stories (last 3-4 days) matching Hello Jumble's style
-      const searchQueries = [
-        // Major company news - OpenAI, Anthropic, Google, Meta, Apple, xAI
-        `OpenAI news January 2026`,
-        `Anthropic Claude news January 2026`,
-        `Google Gemini news January 2026`,
-        `Meta AI news January 2026`,
-        // Product launches and updates
-        `ChatGPT update OR new feature January 2026`,
-        `AI product launch this week 2026`,
-        // Drama, conflict, business moves
-        `AI company lawsuit OR controversy OR drama 2026`,
-        `Sam Altman OR Elon Musk AI news 2026`,
-        // Consumer and cultural impact
-        `AI affecting jobs OR social media OR dating apps 2026`,
-        // Policy and regulation
-        `AI regulation OR government policy 2026`,
-        // Hardware and devices
-        `AI device OR AI hardware announcement 2026`,
-      ];
+      let searchQueries: string[] = [];
+
+      if (mode === "standard") {
+        // Standard Mode: Use predefined topics with strict date filtering
+        const baseTopics = [
+          // Major company news
+          `OpenAI news`,
+          `Anthropic Claude news`,
+          `Google Gemini news`,
+          `Meta AI news`,
+          // Product launches and updates
+          `ChatGPT update OR new feature`,
+          `AI product launch`,
+          // Drama, conflict, business moves
+          `AI company lawsuit OR controversy OR drama`,
+          `Sam Altman OR Elon Musk AI news`,
+          // Consumer and cultural impact
+          `AI affecting jobs OR social media OR dating apps`,
+          // Policy and regulation
+          `AI regulation OR government policy`,
+          // Hardware and devices
+          `AI device OR AI hardware announcement`,
+        ];
+
+        searchQueries = baseTopics.map(topic => `${topic} ${dateFilter}`);
+      } else {
+        // Deep Dive Mode: specific dynamic queries
+        searchQueries = await this.generateTrendQueries(dateFilter);
+      }
 
       const allCandidates: Candidate[] = [];
 
@@ -150,6 +161,50 @@ export class ScoopHunterAgent {
       log(`[ScoopHunter] Research complete. Stored ${storedCount} new leads.`, "agent");
     } catch (error) {
       log(`[ScoopHunter] Error: ${error}`, "agent");
+    }
+  }
+
+  /**
+   * Generate dynamic search queries based on current trends (Deep Dive Mode)
+   */
+  private async generateTrendQueries(dateFilter: string): Promise<string[]> {
+    log("[ScoopHunter] identifying current trends for Deep Dive...", "agent");
+
+    const prompt = `Identify 3-5 specific, fast-rising trends or major events in Artificial Intelligence from the last 7 days.
+    Focus on:
+    - Unexpected geopolitical AI news (e.g., China, EU, Middle East)
+    - Specific company breakthroughs or crises NOT covered by generic searches
+    - Niche but high-impact research
+    - Cultural shifts or viral AI moments
+    
+    Exclude: Generic "AI is growing" or "AI in healthcare" broad topics. Focus on EVENTS.
+    
+    Return JSON:
+    {
+      "trends": [
+        "Description of trend 1",
+        "Description of trend 2"
+      ],
+      "searchQueries": [
+        "Specific search query for trend 1",
+        "Specific search query for trend 2"
+      ]
+    }`;
+
+    try {
+      const response = await geminiService.generateJSON<{
+        trends: string[];
+        searchQueries: string[];
+      }>(prompt);
+
+      log(`[ScoopHunter] Identified trends: ${response.trends.join(", ")}`, "agent");
+
+      // Append date filter to dynamic queries
+      return response.searchQueries.map(q => `${q} ${dateFilter}`);
+    } catch (error) {
+      log(`[ScoopHunter] Failed to generate trend queries: ${error}`, "agent");
+      // Fallback to a generic "what happened in AI" query if generation fails
+      return [`significant AI news events ${dateFilter}`, `unexpected AI breakthrough ${dateFilter}`];
     }
   }
 
