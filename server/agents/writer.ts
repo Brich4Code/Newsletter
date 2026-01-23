@@ -357,7 +357,7 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 5. Expected total length: 2500+ words
 
 📋 OUTPUT FORMAT EXAMPLE (showing correct structure WITHOUT section labels):
-```
+\`\`\`
 The Subject Line Goes Here
 
 Preview text goes here...
@@ -402,7 +402,7 @@ Wrap up content...
 **Main Story:**
 - https://url1.com
 ...
-```
+\`\`\`
 
 # 🚨 CRITICAL URL EMBEDDING RULES - READ CAREFULLY:
 
