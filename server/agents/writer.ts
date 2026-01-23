@@ -328,31 +328,81 @@ Use the research notes to craft engaging, fact-checked content.
 
 # REQUIRED COMPLETE STRUCTURE - YOU MUST INCLUDE ALL OF THESE SECTIONS IN ORDER:
 
-**Section 1: Subject Line** (40-60 characters)
-**Section 2: Preview Text** (Tease secondary story + one Weekly Scoop item)
-**Section 3: Newsletter Title** (≤60 characters, fresh angle on main story)
-**Section 4: Welcome To This Week's Edition Of Jumble** (45-70 words, end with ⬇️)
-**Section 5: In this newsletter:** (Exactly 5 bullets with emojis)
-**Section 6: Main Story**
-  - MUST be a separate H1 header with emoji
+🚨 CRITICAL: Do NOT include section numbers or labels like "Section 1:", "Section 2:", etc. in your output.
+The sections below are numbered for YOUR reference only - do NOT output these numbers.
+
+1. **Subject Line** (40-60 characters) - Output ONLY the subject line text, no label
+2. **Preview Text** (Tease secondary story + one Weekly Scoop item) - Output ONLY the preview text, no label
+3. **Newsletter Title** (≤60 characters, fresh angle on main story) - Output ONLY the title text, no label
+4. **Welcome To This Week's Edition Of Jumble** (45-70 words, end with ⬇️) - Start with "Welcome to Jumble..."
+5. **In this newsletter:** (Exactly 5 bullets with emojis) - Output "In this newsletter:" followed by 5 bullets
+6. **Main Story** - MUST be a separate H1 header with emoji (e.g., "# 🤖 Your Story Title")
   - ~400 words with 2-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Main Story URL bank throughout the story
-**Section 7: Secondary Story**
-  - MUST be a separate H1 header with emoji (NOT nested under main story)
+7. **Secondary Story** - MUST be a separate H1 header with emoji (NOT nested under main story)
   - ~350 words with 1-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Secondary Story URL bank throughout the story
-**Section 8: Weekly Scoop 📢** (Exactly 6 headlines, each with emoji and unique link)
+8. **Weekly Scoop 📢** - Output as "## Weekly Scoop 📢" followed by 6 headlines
+  - Each headline: emoji + [markdown link](url)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
-**Section 9: Weekly Challenge** (150-200 words with clear steps or scoring)
-**Section 10: Wrap Up** (Bold 1-2 lines inviting replies)
-**Section 11: Sources** - List all URLs used, grouped by section
+9. **Weekly Challenge** (150-200 words) - Output as "## Weekly Challenge" followed by content
+10. **Wrap Up** (Bold 1-2 lines inviting replies) - Output as "## Wrap Up" followed by content
+11. **Sources** - Output as "## Sources" with URLs grouped by category
 
 ⚠️ CRITICAL COMPLETION REQUIREMENTS:
 1. You MUST complete ALL 11 sections above - no exceptions
-2. Do NOT stop early or skip sections
-3. The Main Story and Secondary Story MUST have separate H1 headers
+2. Do NOT include "Section 1:", "Section 2:", etc. in your output - output the content directly
+3. The Main Story and Secondary Story MUST have separate H1 headers (# Header)
 4. The newsletter is NOT complete until you write the Sources section
 5. Expected total length: 2500+ words
+
+📋 OUTPUT FORMAT EXAMPLE (showing correct structure WITHOUT section labels):
+```
+The Subject Line Goes Here
+
+Preview text goes here...
+
+Why This Matters: The Main Story Angle
+
+Welcome to Jumble, your go-to source for AI news updates...
+
+In this newsletter:
+🤖 First bullet point
+💡 Second bullet point
+...
+
+# 🤖 Main Story H1 Title Here
+
+First paragraph of main story...
+
+## 🔍 First H2 Subsection
+
+Content with [embedded links](https://url.com)...
+
+# 💡 Secondary Story H1 Title Here
+
+Secondary story content...
+
+## Weekly Scoop 📢
+
+🍎 [First headline as markdown link](https://url1.com)
+🚀 [Second headline as markdown link](https://url2.com)
+...
+
+## Weekly Challenge
+
+Challenge content...
+
+## Wrap Up
+
+Wrap up content...
+
+## Sources
+
+**Main Story:**
+- https://url1.com
+...
+```
 
 # 🚨 CRITICAL URL EMBEDDING RULES - READ CAREFULLY:
 
@@ -415,13 +465,13 @@ Ensure all word counts, formatting rules, and link standards are strictly follow
 🚨 BEFORE YOU FINISH - COMPLETION CHECKLIST:
 
 Before ending your output, verify you have written ALL of these sections:
-✓ Subject Line
-✓ Preview Text
-✓ Newsletter Title
-✓ Welcome message
-✓ "In this newsletter:" bullets
-✓ Main Story (separate H1, ~400 words, with 5-7 embedded links)
-✓ Secondary Story (separate H1, ~350 words, with 5-7 embedded links)
+✓ Subject Line (just the text, NO "Section 1:" label)
+✓ Preview Text (just the text, NO "Section 2:" label)
+✓ Newsletter Title (just the text, NO "Section 3:" label)
+✓ Welcome message (starts with "Welcome to Jumble...")
+✓ "In this newsletter:" bullets (5 bullets with emojis)
+✓ Main Story (separate H1 like "# 🤖 Title", ~400 words, with 5-7 embedded links)
+✓ Secondary Story (separate H1 like "# 💡 Title", ~350 words, with 5-7 embedded links)
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
   - ✅ 🤖 [Headline text](https://url.com) = CORRECT
   - ❌ 🤖 Headline text = WRONG (missing URL)
@@ -432,10 +482,10 @@ Before ending your output, verify you have written ALL of these sections:
 If ANY section is missing or Weekly Scoop headlines lack embedded URLs, you have NOT completed the newsletter correctly. Keep writing until ALL sections are present and properly formatted.
 
 CRITICAL OUTPUT INSTRUCTIONS:
-1. Do NOT include any internal thought process, reasoning, or conversational text.
-2. Output ONLY the final newsletter content.
-3. Output the COMPLETE newsletter with ALL 11 sections listed above.
-4. Do NOT stop generating until you have written the Sources section at the very end.
+1. Do NOT include section labels like "Section 1:", "Section 2:", etc. in your output
+2. Do NOT include any internal thought process, reasoning, or conversational text
+3. Output ONLY the final newsletter content with sections in the correct order
+4. Do NOT stop generating until you have written the Sources section at the very end
 5. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
 
     const MAX_RETRIES = 3;
@@ -540,7 +590,11 @@ CRITICAL OUTPUT INSTRUCTIONS:
       const mainWordCount = this.countWords(sections.mainStory.content);
       log(`[Writer] Main story word count: ${mainWordCount}`, "agent");
 
-      if (mainWordCount < 325 || mainWordCount > 400) {
+      // Only rewrite if word count is reasonable (not suspiciously low like 12 words)
+      if (mainWordCount < 100) {
+        log(`[Writer] ⚠️ Main story word count suspiciously low (${mainWordCount}). Skipping rewrite to avoid errors.`, "agent");
+        log(`[Writer] Main story content length: ${sections.mainStory.content.length} chars`, "agent");
+      } else if (mainWordCount < 325 || mainWordCount > 400) {
         log(`[Writer] Main story out of range (325-400). Rewriting to 350 words...`, "agent");
         const rewritten = await this.rewriteToWordCount(sections.mainStory.content, 350);
         updatedDraft = updatedDraft.replace(sections.mainStory.content, rewritten);
@@ -553,7 +607,11 @@ CRITICAL OUTPUT INSTRUCTIONS:
       const secondaryWordCount = this.countWords(sections.secondaryStory.content);
       log(`[Writer] Secondary story word count: ${secondaryWordCount}`, "agent");
 
-      if (secondaryWordCount < 325 || secondaryWordCount > 400) {
+      // Only rewrite if word count is reasonable (not suspiciously low)
+      if (secondaryWordCount < 100) {
+        log(`[Writer] ⚠️ Secondary story word count suspiciously low (${secondaryWordCount}). Skipping rewrite to avoid errors.`, "agent");
+        log(`[Writer] Secondary story content length: ${sections.secondaryStory.content.length} chars`, "agent");
+      } else if (secondaryWordCount < 325 || secondaryWordCount > 400) {
         log(`[Writer] Secondary story out of range (325-400). Rewriting to 350 words...`, "agent");
         const rewritten = await this.rewriteToWordCount(sections.secondaryStory.content, 350);
         updatedDraft = updatedDraft.replace(sections.secondaryStory.content, rewritten);
@@ -578,31 +636,70 @@ CRITICAL OUTPUT INSTRUCTIONS:
     mainStory: { content: string } | null;
     secondaryStory: { content: string } | null;
   } {
-    // Find main story: from first H1 with emoji until Weekly Scoop or next H1
-    const mainStoryMatch = draft.match(/(^|\n)(#\s+[^\n]+\n[\s\S]*?)(?=\n##?\s+Weekly Scoop|$)/m);
-
-    // Find secondary story: typically the second H1 before Weekly Scoop
+    // Find all H1 headers (lines starting with # followed by space)
     const h1Headers = Array.from(draft.matchAll(/^#\s+[^\n]+$/gm));
+
+    log(`[Writer] Found ${h1Headers.length} H1 headers in draft`, "agent");
+
+    if (h1Headers.length === 0) {
+      log("[Writer] ⚠️ No H1 headers found - cannot extract stories", "agent");
+      return { mainStory: null, secondaryStory: null };
+    }
+
+    // Log the H1 headers found
+    h1Headers.forEach((match, i) => {
+      log(`[Writer] H1 ${i + 1}: "${match[0]}" at index ${match.index}`, "agent");
+    });
 
     let mainStory = null;
     let secondaryStory = null;
 
+    // Find Weekly Scoop marker (could be H2 or text)
+    const weeklyScoopMatch = draft.match(/^##?\s+Weekly Scoop/gm);
+    const weeklyScoopIndex = weeklyScoopMatch ? draft.indexOf(weeklyScoopMatch[0]) : -1;
+
+    log(`[Writer] Weekly Scoop found at index: ${weeklyScoopIndex}`, "agent");
+
     if (h1Headers.length >= 1) {
-      // Main story: from first H1 to second H1 (or Weekly Scoop)
+      // Main story: from first H1 to second H1 (or Weekly Scoop if no second H1)
       const firstH1Index = h1Headers[0].index!;
       const secondH1Index = h1Headers.length > 1 ? h1Headers[1].index! : -1;
-      const weeklyScoopIndex = draft.indexOf('Weekly Scoop');
 
-      const mainEndIndex = secondH1Index !== -1 ? secondH1Index : (weeklyScoopIndex !== -1 ? weeklyScoopIndex : draft.length);
+      let mainEndIndex: number;
+      if (secondH1Index !== -1) {
+        mainEndIndex = secondH1Index;
+      } else if (weeklyScoopIndex !== -1) {
+        mainEndIndex = weeklyScoopIndex;
+      } else {
+        mainEndIndex = draft.length;
+      }
+
       mainStory = {
         content: draft.substring(firstH1Index, mainEndIndex).trim()
       };
 
-      // Secondary story: from second H1 to Weekly Scoop
-      if (h1Headers.length >= 2 && weeklyScoopIndex !== -1) {
+      const mainWordCount = this.countWords(mainStory.content);
+      log(`[Writer] Extracted main story: ${mainStory.content.length} chars, ${mainWordCount} words`, "agent");
+      log(`[Writer] Main story preview: ${mainStory.content.substring(0, 200)}...`, "agent");
+
+      // Secondary story: from second H1 to Weekly Scoop (if exists)
+      if (h1Headers.length >= 2) {
+        let secondaryEndIndex: number;
+        if (weeklyScoopIndex !== -1) {
+          secondaryEndIndex = weeklyScoopIndex;
+        } else {
+          secondaryEndIndex = draft.length;
+        }
+
         secondaryStory = {
-          content: draft.substring(secondH1Index, weeklyScoopIndex).trim()
+          content: draft.substring(secondH1Index, secondaryEndIndex).trim()
         };
+
+        const secondaryWordCount = this.countWords(secondaryStory.content);
+        log(`[Writer] Extracted secondary story: ${secondaryStory.content.length} chars, ${secondaryWordCount} words`, "agent");
+        log(`[Writer] Secondary story preview: ${secondaryStory.content.substring(0, 200)}...`, "agent");
+      } else {
+        log("[Writer] ⚠️ No second H1 found - no secondary story extracted", "agent");
       }
     }
 
@@ -655,7 +752,7 @@ Output ONLY the rewritten section with no explanations or conversational text.`;
 
     const rewritten = await geminiService.generateWithPro(rewritePrompt, {
       temperature: 0.4, // Lower temp for precision
-      maxTokens: 4096,
+      maxTokens: 16384, // Increased from 4096 to avoid truncation
     });
 
     return rewritten.trim();
