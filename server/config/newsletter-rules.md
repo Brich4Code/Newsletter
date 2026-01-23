@@ -103,22 +103,25 @@ It can even help with big purchases by researching products that fit your specif
 Target length about 350 words.
 Same linking rules as above.
 Weekly Scoop 📢
-Six headlines
+Six headlines. Each headline MUST be an embedded markdown link with the URL inside.
+Format: 🤖 [Headline text describing the story](https://actual-source-url.com)
+
 (Ex. '
-🔞 Grok AI faces backlash for continuing to allow the creation of explicit images
+🔞 [Grok AI faces backlash for continuing to allow explicit image creation](https://techcrunch.com/example-grok-article)
 
-🛒 Walmart accelerates its AI strategy with revamped C-Suite and focus
+🛒 [Walmart accelerates its AI strategy with revamped C-Suite focus](https://reuters.com/example-walmart-ai)
 
-🗣️ Matthew McConaughey trademarks iconic catchphrases to stop unauthorized AI voice cloning
+🗣️ [Matthew McConaughey trademarks catchphrases to stop AI voice cloning](https://variety.com/example-mcconaughey)
 
-🐊 Critics label a viral AI Aboriginal Steve Irwin character as cultural theft
+🐊 [Critics label viral AI Aboriginal Steve Irwin character as cultural theft](https://theguardian.com/example-irwin-ai)
 
-✒️ Symbolic.ai signs a major partnership to integrate AI directly into News Corp newsrooms
+✒️ [Symbolic.ai signs major partnership to integrate AI into News Corp](https://wsj.com/example-symbolic-newscorp)
 
-⚡ White House and governors push for urgent grid updates to fix AI power shortages')
+⚡ [White House and governors push for urgent grid updates for AI power](https://nytimes.com/example-grid-update)')
 
-No bullet points, just one line each with emoji in the front of the headline
-Each has an emoji and a single, unique link. Do not duplicate links used elsewhere.
+CRITICAL: Each headline MUST be a clickable markdown link [text](url) - NOT plain text.
+No bullet points, just one line each with emoji in front followed by the markdown link.
+Each has an emoji and a single, unique embedded URL. Do not duplicate links used elsewhere.
 Use varied, reputable outlets. Include one YouTube or video link when relevant.
 Do not repeat items already used in main or secondary stories.
 Weekly Challenge
