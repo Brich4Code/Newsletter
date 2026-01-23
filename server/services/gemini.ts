@@ -9,6 +9,12 @@ export interface GenerationOptions {
   useGroundedSearch?: boolean; // Enable Google Search grounding
 }
 
+export interface GenerationResult {
+  text: string;
+  finishReason: string;
+  wasTruncated: boolean;
+}
+
 export interface SearchResult {
   title: string;
   url: string;
@@ -133,6 +139,50 @@ export class GeminiService {
       return text;
     } catch (error) {
       log(`[Gemini Pro] Error: ${error}`, "gemini");
+      throw new Error(`Gemini Pro generation failed: ${error}`);
+    }
+  }
+
+  /**
+   * Generate content using Gemini Pro with detailed result info
+   * Returns finish reason to allow caller to handle truncation
+   */
+  async generateWithProDetailed(prompt: string, options?: GenerationOptions): Promise<GenerationResult> {
+    this.initialize();
+
+    try {
+      const maxTokens = options?.maxTokens ?? 8192;
+      log(`[Gemini Pro Detailed] Generating (maxOutputTokens: ${maxTokens})...`, "gemini");
+
+      const result = await this.proModel!.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: maxTokens,
+          topP: options?.topP,
+          topK: options?.topK,
+        },
+      });
+
+      const response = result.response;
+      const text = response.text();
+      let finishReason = 'UNKNOWN';
+      let wasTruncated = false;
+
+      const candidates = response.candidates;
+      if (candidates && candidates.length > 0) {
+        finishReason = candidates[0].finishReason || 'UNKNOWN';
+        log(`[Gemini Pro Detailed] Finish reason: ${finishReason}`, "gemini");
+
+        if (finishReason === 'MAX_TOKENS') {
+          log(`[Gemini Pro Detailed] ⚠️ Output was truncated due to max token limit`, "gemini");
+          wasTruncated = true;
+        }
+      }
+
+      return { text, finishReason, wasTruncated };
+    } catch (error) {
+      log(`[Gemini Pro Detailed] Error: ${error}`, "gemini");
       throw new Error(`Gemini Pro generation failed: ${error}`);
     }
   }

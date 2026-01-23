@@ -233,8 +233,80 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
   }
 
   /**
+   * Check if the newsletter draft is complete (has all required sections)
+   */
+  private isNewsletterComplete(draft: string): { complete: boolean; missing: string[] } {
+    const requiredSections = [
+      { name: 'Subject Line', pattern: /Subject Line/i },
+      { name: 'Preview Text', pattern: /Preview Text/i },
+      { name: 'Newsletter Title', pattern: /Newsletter Title/i },
+      { name: 'Welcome', pattern: /Welcome/i },
+      { name: 'In this newsletter', pattern: /In this newsletter|In today's newsletter/i },
+      { name: 'Main Story H1', pattern: /^#\s+[^\n]+/m },
+      { name: 'Weekly Scoop', pattern: /Weekly Scoop/i },
+      { name: 'Weekly Challenge', pattern: /Weekly Challenge|Challenge:/i },
+      { name: 'Wrap Up', pattern: /Wrap Up|wrap.up/i },
+      { name: 'Sources', pattern: /Sources|##?\s+Sources/i },
+    ];
+
+    const missing: string[] = [];
+    for (const section of requiredSections) {
+      if (!section.pattern.test(draft)) {
+        missing.push(section.name);
+      }
+    }
+
+    // Also check for mid-sentence truncation (ends without proper punctuation)
+    const trimmed = draft.trim();
+    const endsWithPunctuation = /[.!?)\]"]$/.test(trimmed) || trimmed.endsWith('---');
+    if (!endsWithPunctuation) {
+      missing.push('Proper ending (content appears cut off mid-sentence)');
+    }
+
+    return { complete: missing.length === 0, missing };
+  }
+
+  /**
+   * Validate Weekly Scoop section has embedded URLs
+   */
+  private validateWeeklyScoop(draft: string): { valid: boolean; issues: string[] } {
+    const issues: string[] = [];
+
+    // Find Weekly Scoop section
+    const scoopMatch = draft.match(/Weekly Scoop[^\n]*\n([\s\S]*?)(?=\n##?\s+Weekly Challenge|$)/i);
+    if (!scoopMatch) {
+      issues.push('Weekly Scoop section not found');
+      return { valid: false, issues };
+    }
+
+    const scoopContent = scoopMatch[1];
+
+    // Count emoji lines (headlines)
+    const emojiLines = scoopContent.match(/^[^\n]*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}][^\n]*/gmu) || [];
+
+    if (emojiLines.length < 6) {
+      issues.push(`Only ${emojiLines.length} headlines found (need 6)`);
+    }
+
+    // Check each line has an embedded URL [text](url)
+    let linesWithUrls = 0;
+    for (const line of emojiLines) {
+      if (/\[([^\]]+)\]\(https?:\/\/[^)]+\)/.test(line)) {
+        linesWithUrls++;
+      }
+    }
+
+    if (linesWithUrls < emojiLines.length) {
+      issues.push(`Only ${linesWithUrls}/${emojiLines.length} headlines have embedded URLs (all must have [text](url) format)`);
+    }
+
+    return { valid: issues.length === 0, issues };
+  }
+
+  /**
    * Phase 2: Write newsletter using Gemini Flash Preview with style guide
    * AI crafts the final newsletter following all rules
+   * Includes retry logic for truncation and validation
    */
   private async writeNewsletter(research: string, issueNumber: number): Promise<string> {
     const writePrompt = `You are the writer for Hello Jumble, a newsletter about AI news. You are generating Issue #${issueNumber}.
@@ -304,10 +376,14 @@ Use the research notes to craft engaging, fact-checked content.
 - Use different URLs for different claims
 
 **Weekly Scoop (Section 8):**
+🚨 CRITICAL FORMAT - EVERY HEADLINE MUST BE A MARKDOWN LINK:
+- CORRECT: 🤖 [Headline text that describes the story](https://actual-url.com)
+- WRONG: 🤖 Headline text that describes the story (NO URL = INVALID)
 - Each of the 6 headlines MUST have exactly 1 embedded URL from "Weekly Scoop URLs"
-- Format: 🤖 [Headline text that describes the story](https://actual-url.com)
-- Use ALL 6 URLs from the Weekly Scoop URL bank
-- ⚠️ CRITICAL: Write ORIGINAL headlines in your own words. Do NOT copy verbatim from sources. Rewrite each headline to be unique, engaging, and avoid plagiarism
+- The ENTIRE headline text must be inside [square brackets] with (url) immediately after
+- Use ALL 6 URLs from the Weekly Scoop URL bank - each URL used exactly once
+- ⚠️ Write ORIGINAL headlines in your own words. Do NOT copy verbatim from sources
+- NO plain text headlines - every single one MUST be [clickable](url)
 
 ## Sources Section (Section 11):
 After the Wrap Up section, add:
@@ -346,12 +422,14 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ "In this newsletter:" bullets
 ✓ Main Story (separate H1, ~400 words, with 5-7 embedded links)
 ✓ Secondary Story (separate H1, ~350 words, with 5-7 embedded links)
-✓ Weekly Scoop (6 headlines with 6 unique embedded links)
+✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
+  - ✅ 🤖 [Headline text](https://url.com) = CORRECT
+  - ❌ 🤖 Headline text = WRONG (missing URL)
 ✓ Weekly Challenge (150-200 words)
 ✓ Wrap Up
 ✓ Sources section
 
-If ANY section is missing, you have NOT completed the newsletter. Keep writing until ALL sections are present.
+If ANY section is missing or Weekly Scoop headlines lack embedded URLs, you have NOT completed the newsletter correctly. Keep writing until ALL sections are present and properly formatted.
 
 CRITICAL OUTPUT INSTRUCTIONS:
 1. Do NOT include any internal thought process, reasoning, or conversational text.
@@ -360,41 +438,77 @@ CRITICAL OUTPUT INSTRUCTIONS:
 4. Do NOT stop generating until you have written the Sources section at the very end.
 5. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
 
-    let draft = await geminiService.generateWithPro(writePrompt, {
-      temperature: 0.6, // Slightly higher to encourage fuller output (was 0.5)
-      maxTokens: 65536, // Max supported by Gemini 3 Flash Preview (was 51200)
-    });
+    const MAX_RETRIES = 3;
+    let draft = '';
+    let attempt = 0;
+    let lastIssues: string[] = [];
 
-    const rawDraftLength = draft.length;
-    const rawWordCount = draft.split(/\s+/).length;
-    log(`[Writer] Raw draft from Gemini: ${rawDraftLength} chars (${rawWordCount} words)`, "agent");
+    while (attempt < MAX_RETRIES) {
+      attempt++;
+      log(`[Writer] Generation attempt ${attempt}/${MAX_RETRIES}...`, "agent");
 
-    // Check if draft seems incomplete (should be at least 2000 words for full newsletter)
-    if (rawWordCount < 2000) {
-      log(`[Writer] ⚠️ WARNING: Draft seems short (${rawWordCount} words, expected ~2500+). Model may have stopped early.`, "agent");
-    }
+      const result = await geminiService.generateWithProDetailed(writePrompt, {
+        temperature: 0.6 + (attempt - 1) * 0.1, // Slightly increase temp on retries
+        maxTokens: 65536,
+      });
 
-    // Extract markdown from code block if present
-    const match = draft.match(/```markdown\n([\s\S]*?)\n?```/);
-    if (match) {
-      draft = match[1];
-      log(`[Writer] Extracted from markdown code block`, "agent");
-    } else {
-      // Fallback: strip any leading conversational text
-      const possibleStarts = ["Subject Line", "Welcome to Jumble", "# "];
-      let earliestStart = -1;
+      draft = result.text;
+      const rawDraftLength = draft.length;
+      const rawWordCount = draft.split(/\s+/).length;
+      log(`[Writer] Raw draft from Gemini: ${rawDraftLength} chars (${rawWordCount} words), finish: ${result.finishReason}`, "agent");
 
-      for (const start of possibleStarts) {
-        const index = draft.indexOf(start);
-        if (index !== -1 && (earliestStart === -1 || index < earliestStart)) {
-          earliestStart = index;
+      // Extract markdown from code block if present
+      const match = draft.match(/```markdown\n([\s\S]*?)\n?```/);
+      if (match) {
+        draft = match[1];
+        log(`[Writer] Extracted from markdown code block`, "agent");
+      } else {
+        // Fallback: strip any leading conversational text
+        const possibleStarts = ["Subject Line", "Welcome to Jumble", "# "];
+        let earliestStart = -1;
+
+        for (const start of possibleStarts) {
+          const index = draft.indexOf(start);
+          if (index !== -1 && (earliestStart === -1 || index < earliestStart)) {
+            earliestStart = index;
+          }
+        }
+
+        if (earliestStart > 0) {
+          draft = draft.substring(earliestStart);
+          log(`[Writer] Stripped leading text, started at position ${earliestStart}`, "agent");
         }
       }
 
-      if (earliestStart > 0) {
-        draft = draft.substring(earliestStart);
-        log(`[Writer] Stripped leading text, started at position ${earliestStart}`, "agent");
+      // Validate completeness
+      const completionCheck = this.isNewsletterComplete(draft);
+      const scoopCheck = this.validateWeeklyScoop(draft);
+      lastIssues = [...completionCheck.missing, ...scoopCheck.issues];
+
+      if (completionCheck.complete && scoopCheck.valid) {
+        log(`[Writer] ✅ Newsletter validation passed on attempt ${attempt}`, "agent");
+        break;
       }
+
+      // Log issues
+      if (result.wasTruncated) {
+        log(`[Writer] ⚠️ Output was truncated (MAX_TOKENS). Retrying...`, "agent");
+      }
+      if (completionCheck.missing.length > 0) {
+        log(`[Writer] ⚠️ Missing sections: ${completionCheck.missing.join(', ')}`, "agent");
+      }
+      if (scoopCheck.issues.length > 0) {
+        log(`[Writer] ⚠️ Weekly Scoop issues: ${scoopCheck.issues.join(', ')}`, "agent");
+      }
+
+      if (attempt < MAX_RETRIES) {
+        log(`[Writer] Retrying generation...`, "agent");
+      }
+    }
+
+    // Final warning if still incomplete after all retries
+    if (lastIssues.length > 0) {
+      log(`[Writer] ⚠️ WARNING: After ${MAX_RETRIES} attempts, still has issues: ${lastIssues.join(', ')}`, "agent");
     }
 
     log(`[Writer] Final extracted draft: ${draft.length} chars (${draft.split(/\s+/).length} words)`, "agent");
