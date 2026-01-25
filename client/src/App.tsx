@@ -8,6 +8,8 @@ import { getSession, logout as apiLogout, AuthUser } from "./lib/api";
 import EditorialDesk from "@/pages/editorial-desk";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
+import ContentLibraryPage from "@/pages/ContentLibraryPage";
+import EditorPage from "@/pages/EditorPage";
 
 // Auth Context
 interface AuthContextType {
@@ -99,22 +101,19 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
 function Router() {
   return (
-import ContentLibraryPage from "@/pages/ContentLibraryPage";
-  import EditorPage from "@/pages/EditorPage";
-
-  <Switch>
-    <Route path="/login" component={LoginPage} />
-    <Route path="/content">
-      <ProtectedRoute component={ContentLibraryPage} />
-    </Route>
-    <Route path="/editor/:id">
-      <ProtectedRoute component={EditorPage} />
-    </Route>
-    <Route path="/">
-      <ProtectedRoute component={EditorialDesk} />
-    </Route>
-    <Route component={NotFound} />
-  </Switch>
+    <Switch>
+      <Route path="/login" component={LoginPage} />
+      <Route path="/content">
+        <ProtectedRoute component={ContentLibraryPage} />
+      </Route>
+      <Route path="/editor/:id">
+        <ProtectedRoute component={EditorPage} />
+      </Route>
+      <Route path="/">
+        <ProtectedRoute component={EditorialDesk} />
+      </Route>
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
