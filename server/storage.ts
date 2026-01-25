@@ -91,12 +91,13 @@ export class DatabaseStorage implements IStorage {
         c.type,
         c.created_at as "createdAt"
       FROM challenges c
-      WHERE NOT EXISTS (
-        SELECT 1 FROM issues WHERE issues.challenge_id = c.id
+      WHERE c.id NOT IN (
+        SELECT DISTINCT challenge_id FROM issues WHERE challenge_id IS NOT NULL
       )
       ORDER BY c.created_at DESC
       LIMIT 5
     `);
+    console.log(`[Storage] Returning ${result.rows.length} unassigned challenges`);
     return result.rows as Challenge[];
   }
 
@@ -110,15 +111,18 @@ export class DatabaseStorage implements IStorage {
     return challenge;
   }
 
-  async clearRecentChallenges(): Promise<void> {
+  async clearRecentChallenges(): Promise<number> {
     // Only delete challenges that are NOT assigned to any issue (referenced in issues table)
     // We use raw SQL to ensure the NOT EXISTS clause works correctly across different SQL dialects supported by Drizzle
-    await db.execute(sql`
-      DELETE FROM challenges 
-      WHERE NOT EXISTS (
-        SELECT 1 FROM issues WHERE issues.challenge_id = challenges.id
+    const result = await db.execute(sql`
+      DELETE FROM challenges
+      WHERE id NOT IN (
+        SELECT DISTINCT challenge_id FROM issues WHERE challenge_id IS NOT NULL
       )
     `);
+    const deletedCount = result.rowCount ?? 0;
+    console.log(`[Storage] Deleted ${deletedCount} unassigned challenges`);
+    return deletedCount;
   }
 
   // Issues
