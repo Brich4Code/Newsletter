@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, generateChallenges, publishIssue, startResearch, startDeepDiveResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
+import { fetchLeads, fetchChallenges, generateChallenges, publishIssue, startResearch, startDeepDiveResearch, startMonthlyResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2, Shuffle, Plus, StickyNote, Menu, X, PenLine, LogOut } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2, Shuffle, Plus, StickyNote, Menu, X, PenLine, LogOut, Calendar } from "lucide-react";
 import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/App";
@@ -99,6 +99,28 @@ export default function EditorialDesk() {
       toast({
         title: "Deep Dive Failed",
         description: "There was an error starting the deep dive. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Monthly Research mutation
+  const monthlyMutation = useMutation({
+    mutationFn: startMonthlyResearch,
+    onSuccess: () => {
+      toast({
+        title: "Monthly Search Started!",
+        description: "Searching last 30 days across AI, science, and health. This may take 10+ minutes.",
+      });
+      // Refetch leads after a longer delay due to larger scope
+      setTimeout(() => {
+        refetchLeads();
+      }, 300000); // 5 minutes
+    },
+    onError: () => {
+      toast({
+        title: "Monthly Search Failed",
+        description: "There was an error starting the monthly search. Please try again.",
         variant: "destructive",
       });
     },
@@ -559,7 +581,7 @@ export default function EditorialDesk() {
                 variant="default"
                 size="sm"
                 onClick={() => researchMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending}
                 className="bg-primary text-primary-foreground flex-1 sm:flex-none"
               >
                 {researchMutation.isPending ? (
@@ -576,7 +598,7 @@ export default function EditorialDesk() {
                 variant="secondary"
                 size="sm"
                 onClick={() => deepDiveMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending}
                 className="flex-1 sm:flex-none bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white border-indigo-500"
               >
                 {deepDiveMutation.isPending ? (
@@ -588,6 +610,26 @@ export default function EditorialDesk() {
                   <>
                     <Trophy className="mr-1 w-3 h-3" />
                     Trend Scout
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => monthlyMutation.mutate()}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending}
+                className="flex-1 sm:flex-none bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white border-emerald-500"
+              >
+                {monthlyMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-1 w-3 h-3 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="mr-1 w-3 h-3" />
+                    Last 30 Days
                   </>
                 )}
               </Button>

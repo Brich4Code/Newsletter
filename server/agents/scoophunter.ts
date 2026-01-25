@@ -48,15 +48,16 @@ export class ScoopHunterAgent {
     return this.ROUNDUP_PATTERNS.some(pattern => pattern.test(title));
   }
 
-  async run(mode: "standard" | "deep-dive" = "standard"): Promise<void> {
+  async run(mode: "standard" | "deep-dive" | "monthly" = "standard"): Promise<void> {
     log(`[ScoopHunter] Starting research cycle in ${mode} mode...`, "agent");
 
     try {
-      // Calculate date filter (last 7 days)
+      // Calculate date filter based on mode
       const today = new Date();
-      const sevenDaysAgo = new Date(today);
-      sevenDaysAgo.setDate(today.getDate() - 7);
-      const dateFilter = `after:${sevenDaysAgo.toISOString().split('T')[0]}`;
+      const daysBack = mode === "monthly" ? 30 : 7;
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - daysBack);
+      const dateFilter = `after:${startDate.toISOString().split('T')[0]}`;
 
       let searchQueries: string[] = [];
 
@@ -83,6 +84,47 @@ export class ScoopHunterAgent {
         ];
 
         searchQueries = baseTopics.map(topic => `${topic} ${dateFilter}`);
+      } else if (mode === "monthly") {
+        // Monthly Mode: Comprehensive search with expanded topics (last 30 days)
+        const monthlyTopics = [
+          // Major company news (same as standard)
+          `OpenAI news`,
+          `Anthropic Claude news`,
+          `Google Gemini news`,
+          `Meta AI news`,
+          // Product launches and updates
+          `ChatGPT update OR new feature`,
+          `AI product launch`,
+          // Drama, conflict, business moves
+          `AI company lawsuit OR controversy OR drama`,
+          `Sam Altman OR Elon Musk AI news`,
+          // Consumer and cultural impact
+          `AI affecting jobs OR social media OR dating apps`,
+          // Policy and regulation
+          `AI regulation OR government policy`,
+          // Hardware and devices
+          `AI device OR AI hardware announcement`,
+
+          // === GLOBAL AI NEWS ===
+          `AI news China OR Europe OR Asia`,
+          `DeepSeek OR Baidu AI OR Mistral AI news`,
+          `AI startup international OR global`,
+          `AI summit OR international AI agreement OR policy`,
+
+          // === SCIENCE ===
+          `AI scientific discovery OR breakthrough`,
+          `AI research paper OR study published`,
+          `AI climate OR environment OR space exploration`,
+          `AI physics OR biology OR chemistry discovery`,
+
+          // === HEALTH ===
+          `AI healthcare OR medical diagnosis`,
+          `AI drug discovery OR pharmaceutical`,
+          `AI mental health OR therapy`,
+          `AI medical imaging OR radiology`,
+        ];
+
+        searchQueries = monthlyTopics.map(topic => `${topic} ${dateFilter}`);
       } else {
         // Deep Dive Mode: specific dynamic queries
         searchQueries = await this.generateTrendQueries(dateFilter);
