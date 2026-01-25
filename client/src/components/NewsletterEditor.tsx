@@ -20,8 +20,20 @@ interface NewsletterEditorProps {
     isSaving: boolean;
 }
 
-const converter = new Showdown.Converter();
-const turndownService = new TurndownService();
+const converter = new Showdown.Converter({
+    tables: true,
+    strikethrough: true,
+    tasklists: true,
+    simpleLineBreaks: false,
+    openLinksInNewWindow: true,
+    emoji: true,
+    underline: true,
+    headerLevelStart: 1,
+});
+const turndownService = new TurndownService({
+    headingStyle: 'atx',
+    codeBlockStyle: 'fenced',
+});
 
 // Menu Bar Component
 const MenuBar = ({ editor }: { editor: any }) => {
@@ -166,7 +178,7 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
         content: '', // Start empty, will be set by useEffect
         editorProps: {
             attributes: {
-                class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl m-5 focus:outline-none min-h-[500px]',
+                class: 'prose prose-lg max-w-none focus:outline-none min-h-[500px] prose-headings:font-bold prose-h1:text-3xl prose-h1:mt-8 prose-h1:mb-4 prose-h2:text-2xl prose-h2:mt-6 prose-h2:mb-3 prose-p:mb-4 prose-p:leading-relaxed prose-a:text-blue-600 prose-a:underline prose-ul:my-4 prose-li:my-2',
             },
         },
         onUpdate: ({ editor }) => {
@@ -208,7 +220,7 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
     return (
         <div className="flex flex-col min-h-[600px] border rounded-lg shadow-sm bg-card">
             <MenuBar editor={editor} />
-            <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950 p-4 min-h-[500px]">
+            <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950 px-8 py-6 min-h-[500px]">
                 <EditorContent editor={editor} />
             </div>
             <div className="p-2 border-t bg-muted/20 text-xs text-muted-foreground flex justify-end">
