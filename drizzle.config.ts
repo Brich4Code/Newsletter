@@ -16,4 +16,6 @@ export default defineConfig({
       rejectUnauthorized: false,
     },
   },
+  schemaFilter: ["public"],
+  tablesFilter: ["!user_sessions"], // Ignore user_sessions table (managed by connect-pg-simple)
 });
