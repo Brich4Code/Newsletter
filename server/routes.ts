@@ -450,7 +450,7 @@ export async function registerRoutes(
         source: "Newsletter",
         url: "",
         relevanceScore: 0,
-        factCheckStatus: "pending",
+        factCheckStatus: "pending" as const,
         primarySourceUrl: null,
         note: null,
         isManual: false,
@@ -459,8 +459,9 @@ export async function registerRoutes(
       };
 
       // Generate only the prompt (not the image)
-      const prompt = await illustratorAgent["createImagePrompt"](tempLead);
+      const prompt = await illustratorAgent.createImagePrompt(tempLead);
 
+      console.log(`[API] Generated prompt for draft ${req.params.id}: "${prompt}"`);
       res.json({ prompt });
     } catch (error) {
       console.error("Prompt generation error:", error);
