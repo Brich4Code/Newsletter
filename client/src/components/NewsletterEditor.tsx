@@ -33,6 +33,15 @@ const converter = new Showdown.Converter({
 const turndownService = new TurndownService({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced',
+    br: '\n', // Preserve line breaks as newlines in markdown
+});
+
+// Add custom rule to handle line breaks properly
+turndownService.addRule('lineBreak', {
+    filter: 'br',
+    replacement: function() {
+        return '\n';
+    }
 });
 
 // Menu Bar Component
