@@ -213,21 +213,22 @@ export async function registerRoutes(
   // Generate new challenges (Shuffle/Refresh)
   app.post("/api/challenges/generate", requireAuth, async (req, res) => {
     try {
-      console.log("[API] Generating new challenges...");
+      console.log("[API] ========== SHUFFLE CHALLENGES START ==========");
 
       // 1. Clear existing unassigned challenges to keep things fresh
-      await storage.clearRecentChallenges();
+      console.log("[API] Step 1: Clearing unassigned challenges...");
+      const deletedCount = await storage.clearRecentChallenges();
+      console.log(`[API] Deleted ${deletedCount} challenges`);
 
       // 2. Run the generator agent
-      // Note: This relies on the agent writing to storage internally
-      // In a cleaner architecture we might have the agent return data and api writes it,
-      // but following existing pattern where agent writes to storage.
+      console.log("[API] Step 2: Generating new challenges...");
       await import("./agents/challenge-generator").then(m => m.challengeGeneratorAgent.run());
 
-      // 3. Update the Orchestrator/Research loop last run time if needed (optional)
-
-      // 4. Fetch the newly created challenges
+      // 3. Fetch the newly created challenges
+      console.log("[API] Step 3: Fetching generated challenges...");
       const newChallenges = await storage.getChallenges();
+      console.log(`[API] Returning ${newChallenges.length} challenges to client`);
+      console.log("[API] ========== SHUFFLE CHALLENGES END ==========");
 
       res.status(200).json({
         message: "Challenges generated successfully",
