@@ -1,6 +1,7 @@
 import { writerAgent, type SimpleIssueContent, type StoryTopic } from "../agents/writer";
 import { illustratorAgent } from "../agents/illustrator";
 import { googleDocsService } from "../services/google-docs";
+import { draftService } from "../services/draft-service";
 import { storage } from "../storage";
 import { log } from "../index";
 import type { Issue } from "@shared/schema";
@@ -70,26 +71,36 @@ export class PublicationPipeline {
         log(`[Pipeline] Hero image failed, continuing anyway: ${imageError}`, "pipeline");
       }
 
-      // Phase 4: Create Google Doc (required - this is the main output)
-      log("[Pipeline] Phase 4: Creating Google Doc...", "pipeline");
+      // Phase 4: Create Draft in Supabase (New Flow)
+      log("[Pipeline] Phase 4: Saving draft to Supabase...", "pipeline");
+
+      const savedDraft = await draftService.createDraft(
+        issue.issueNumber,
+        draft,
+        issue.id
+      );
+
+      log(`[Pipeline] Draft saved with ID: ${savedDraft.id}`, "pipeline");
+
+      /* 
+      // LEGACY: Auto-create Google Doc
+      // Now handled via manual "Publish" button in Editor
+      
       const googleDocsUrl = await googleDocsService.createNewsletterDocument({
         markdown: draft,
         heroImageUrl: heroImageUrl || undefined,
         issueNumber: issue.issueNumber,
       });
+      */
 
-      // Phase 5: Update issue record with Google Docs URL
-      try {
-        await storage.updateIssue(issue.id, { googleDocsUrl });
-      } catch (updateError) {
-        warnings.push(`Failed to update issue record: ${updateError}`);
-        log(`[Pipeline] Failed to update issue record: ${updateError}`, "pipeline");
-      }
+      const googleDocsUrl = null;
+
+      // Phase 5: Update issue record
+      // We might want to store draftId in issue, but issueId is in draft, so that's fine.
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      const hasGoogleDoc = googleDocsUrl ? `${googleDocsUrl}` : "No Google Doc (check warnings)";
       log(
-        `[Pipeline] ✓ Publication complete (${duration}s): ${hasGoogleDoc}`,
+        `[Pipeline] ✓ Draft generation complete (${duration}s). Ready for editing.`,
         "pipeline"
       );
 
@@ -165,9 +176,9 @@ export class PublicationPipeline {
       quickLinks: quickLinkTopics.length > 0 ? quickLinkTopics : undefined,
       challenge: challengeData
         ? {
-            title: challengeData.title,
-            description: challengeData.description,
-          }
+          title: challengeData.title,
+          description: challengeData.description,
+        }
         : undefined,
     };
   }

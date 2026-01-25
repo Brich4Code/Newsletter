@@ -114,4 +114,42 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+
+export const newsletterDrafts = pgTable("newsletter_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  issueId: varchar("issue_id").references(() => issues.id),
+  issueNumber: integer("issue_number").notNull(),
+  content: text("content").notNull(),
+  status: text("status").notNull().default("draft"), // draft, published, archived
+  googleDocsUrl: text("google_docs_url"),
+  heroImageUrl: text("hero_image_url"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertNewsletterDraftSchema = createInsertSchema(newsletterDrafts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertNewsletterDraft = z.infer<typeof insertNewsletterDraftSchema>;
+export type NewsletterDraft = typeof newsletterDrafts.$inferSelect;
+
+export const newsletterVersions = pgTable("newsletter_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  draftId: varchar("draft_id").references(() => newsletterDrafts.id, { onDelete: 'cascade' }).notNull(),
+  content: text("content").notNull(),
+  versionNumber: integer("version_number").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertNewsletterVersionSchema = createInsertSchema(newsletterVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertNewsletterVersion = z.infer<typeof insertNewsletterVersionSchema>;
+export type NewsletterVersion = typeof newsletterVersions.$inferSelect;
+

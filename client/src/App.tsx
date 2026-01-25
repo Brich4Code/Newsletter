@@ -99,13 +99,22 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/login" component={LoginPage} />
-      <Route path="/">
-        <ProtectedRoute component={EditorialDesk} />
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
+import ContentLibraryPage from "@/pages/ContentLibraryPage";
+  import EditorPage from "@/pages/EditorPage";
+
+  <Switch>
+    <Route path="/login" component={LoginPage} />
+    <Route path="/content">
+      <ProtectedRoute component={ContentLibraryPage} />
+    </Route>
+    <Route path="/editor/:id">
+      <ProtectedRoute component={EditorPage} />
+    </Route>
+    <Route path="/">
+      <ProtectedRoute component={EditorialDesk} />
+    </Route>
+    <Route component={NotFound} />
+  </Switch>
   );
 }
 
