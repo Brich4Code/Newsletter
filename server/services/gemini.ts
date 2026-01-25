@@ -357,6 +357,31 @@ Requirements:
       throw new Error(`Failed to parse extracted JSON: ${e}`);
     }
   }
+
+  /**
+   * Generate an image from a text prompt
+   * Currently uses Pollinations.ai (free, no API key required)
+   * Can be upgraded to Imagen 3 via Vertex AI later
+   */
+  async generateImage(prompt: string): Promise<string> {
+    try {
+      log("[Gemini] Generating image with Pollinations.ai...", "gemini");
+
+      // URL-encode the prompt for Pollinations.ai
+      const encodedPrompt = encodeURIComponent(prompt);
+
+      // Pollinations.ai endpoint - generates images without API key
+      // Returns a direct image URL that can be used immediately
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=630&nologo=true`;
+
+      log(`[Gemini] Image generated: ${imageUrl}`, "gemini");
+
+      return imageUrl;
+    } catch (error) {
+      log(`[Gemini] Image generation error: ${error}`, "gemini");
+      throw new Error(`Failed to generate image: ${error}`);
+    }
+  }
 }
 
 // Singleton instance

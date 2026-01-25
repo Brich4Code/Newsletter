@@ -435,10 +435,12 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 8. **Weekly Scoop 📢** - Output as "## Weekly Scoop 📢" followed by 6 headlines
   - Each headline: emoji + [markdown link](url)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
-9. **Weekly Challenge** (150-200 words) - Output as "## Weekly Challenge" followed by:
+9. **Weekly Challenge** (200-350 words) - Output as "## Weekly Challenge" followed by:
   - Brief intro explaining the challenge (1-2 sentences)
   - Optional: YouTube video embed if relevant
-  - 3-5 numbered steps, each with a unique emoji prefix
+  - 4-7 numbered steps, each with a unique emoji prefix
+  - Use MODERN AI tools ONLY (2025-2026 tools like ChatGPT, Claude 3.5, Gemini 2.0, NotebookLM, Midjourney v6, Perplexity, Gamma, etc.)
+  - NO outdated tools or deprecated workflows
   - Format each step as: "🎁 Step 1: [Title]" followed by 1-2 sentences of instructions
   - Example format:
     🎁 Step 1: Pick your constraints
@@ -446,6 +448,8 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 
     🍪 Step 2: Turn one idea into action
     Have ChatGPT generate two options...
+
+  - CRITICAL: You MUST generate between 4-7 steps (not just 3-4)
 10. **Wrap Up** (Bold 1-2 lines inviting replies) - Output as "## Wrap Up" followed by content
 11. **Sources** - Output as "## Sources" with URLs grouped by category
 
@@ -587,7 +591,7 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
   - ✅ 🤖 [Headline text](https://url.com) = CORRECT
   - ❌ 🤖 Headline text = WRONG (missing URL)
-✓ Weekly Challenge (150-200 words with emoji-prefixed steps like "🎁 Step 1: Title")
+✓ Weekly Challenge (200-350 words with 4-7 emoji-prefixed steps like "🎁 Step 1: Title" using modern AI tools)
 ✓ Wrap Up
 ✓ Sources section
 

@@ -427,5 +427,80 @@ export async function registerRoutes(
     }
   });
 
+  // Generate hero image for draft
+  app.post("/api/drafts/:id/generate-image", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const { illustratorAgent } = await import("./agents/illustrator");
+
+      const draft = await draftService.getDraft(req.params.id);
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+
+      // Extract title from content (first line or H1)
+      const titleMatch = draft.content.match(/^#\s+(.+)$/m) || draft.content.match(/^(.+)$/m);
+      const title = titleMatch ? titleMatch[1].trim() : `Newsletter Issue #${draft.issueNumber}`;
+
+      // Create a temporary Lead object for image generation
+      const tempLead = {
+        id: draft.id,
+        title,
+        summary: draft.content.substring(0, 500),
+        source: "Newsletter",
+        url: "",
+        relevanceScore: 0,
+        factCheckStatus: "pending",
+        primarySourceUrl: null,
+        note: null,
+        isManual: false,
+        createdAt: new Date(),
+        embedding: null,
+      };
+
+      const result = await illustratorAgent.generateHeroImage(tempLead);
+
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate image" });
+      }
+
+      // Update draft with image URL and prompt
+      await draftService.updateDraftImage(req.params.id, result.imageUrl, result.prompt);
+
+      res.json({ imageUrl: result.imageUrl, prompt: result.prompt });
+    } catch (error) {
+      console.error("Image generation error:", error);
+      res.status(500).json({ error: "Failed to generate image" });
+    }
+  });
+
+  // Regenerate hero image with custom prompt
+  app.post("/api/drafts/:id/regenerate-image", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const { illustratorAgent } = await import("./agents/illustrator");
+      const { prompt } = req.body;
+
+      if (!prompt) {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      const draft = await draftService.getDraft(req.params.id);
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+
+      const imageUrl = await illustratorAgent.generateFromPrompt(prompt);
+
+      // Update draft with new image URL and prompt
+      await draftService.updateDraftImage(req.params.id, imageUrl, prompt);
+
+      res.json({ imageUrl, prompt });
+    } catch (error) {
+      console.error("Image regeneration error:", error);
+      res.status(500).json({ error: "Failed to regenerate image" });
+    }
+  });
+
   return httpServer;
 }

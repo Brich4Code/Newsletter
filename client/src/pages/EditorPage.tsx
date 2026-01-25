@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { NewsletterEditor } from "@/components/NewsletterEditor";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Share } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Loader2, Share, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -14,6 +15,8 @@ export default function EditorPage() {
     const [location, setLocation] = useLocation();
     const queryClient = useQueryClient();
     const [content, setContent] = useState("");
+    const [heroImageUrl, setHeroImageUrl] = useState("");
+    const [heroImagePrompt, setHeroImagePrompt] = useState("");
 
     const isNew = id === "new";
 
@@ -29,10 +32,12 @@ export default function EditorPage() {
         enabled: !isNew && !!id,
     });
 
-    // Init content from draft
+    // Init content and image from draft
     useEffect(() => {
         if (draft) {
             setContent(draft.content || "");
+            setHeroImageUrl(draft.heroImageUrl || "");
+            setHeroImagePrompt(draft.heroImagePrompt || "");
         }
     }, [draft]);
 
@@ -91,6 +96,45 @@ export default function EditorPage() {
         },
         onError: (err) => {
             toast.error("Failed to publish");
+        }
+    });
+
+    const generateImageMutation = useMutation({
+        mutationFn: async () => {
+            const res = await fetch(`/api/drafts/${id}/generate-image`, {
+                method: "POST",
+            });
+            if (!res.ok) throw new Error("Failed to generate image");
+            return res.json();
+        },
+        onSuccess: (data) => {
+            setHeroImageUrl(data.imageUrl);
+            setHeroImagePrompt(data.prompt);
+            toast.success("Hero image generated!");
+            queryClient.invalidateQueries({ queryKey: ["draft", id] });
+        },
+        onError: () => {
+            toast.error("Failed to generate image");
+        }
+    });
+
+    const regenerateImageMutation = useMutation({
+        mutationFn: async (prompt: string) => {
+            const res = await fetch(`/api/drafts/${id}/regenerate-image`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt }),
+            });
+            if (!res.ok) throw new Error("Failed to regenerate image");
+            return res.json();
+        },
+        onSuccess: (data) => {
+            setHeroImageUrl(data.imageUrl);
+            toast.success("Hero image regenerated!");
+            queryClient.invalidateQueries({ queryKey: ["draft", id] });
+        },
+        onError: () => {
+            toast.error("Failed to regenerate image");
         }
     });
 
@@ -167,7 +211,86 @@ export default function EditorPage() {
 
             {/* Editor Area */}
             <main className="flex-1 overflow-hidden">
-                <div className="h-full overflow-y-auto p-6 max-w-5xl mx-auto">
+                <div className="h-full overflow-y-auto p-6 max-w-5xl mx-auto space-y-6">
+                    {/* Hero Image Section */}
+                    {!isNew && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <ImageIcon className="h-5 w-5" />
+                                    Hero Image
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Image Preview */}
+                                {heroImageUrl && (
+                                    <div className="relative rounded-lg overflow-hidden border">
+                                        <img
+                                            src={heroImageUrl}
+                                            alt="Hero"
+                                            className="w-full h-64 object-cover"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Image Prompt Editor */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Image Prompt</label>
+                                    <Textarea
+                                        value={heroImagePrompt}
+                                        onChange={(e) => setHeroImagePrompt(e.target.value)}
+                                        placeholder="Enter or edit the image generation prompt..."
+                                        rows={3}
+                                        className="resize-none"
+                                    />
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                    {!heroImageUrl ? (
+                                        <Button
+                                            onClick={() => generateImageMutation.mutate()}
+                                            disabled={generateImageMutation.isPending}
+                                            className="w-full"
+                                        >
+                                            {generateImageMutation.isPending ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Generating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ImageIcon className="mr-2 h-4 w-4" />
+                                                    Generate Hero Image
+                                                </>
+                                            )}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={() => regenerateImageMutation.mutate(heroImagePrompt)}
+                                            disabled={regenerateImageMutation.isPending || !heroImagePrompt.trim()}
+                                            className="w-full"
+                                            variant="outline"
+                                        >
+                                            {regenerateImageMutation.isPending ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Regenerating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                                    Regenerate Image
+                                                </>
+                                            )}
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Newsletter Content Editor */}
                     <Card className="border-none shadow-none">
                         <CardContent className="p-0">
                             <NewsletterEditor
