@@ -53,6 +53,7 @@ export class PublicationPipeline {
       // Phase 3: Generate hero image (non-blocking)
       log("[Pipeline] Phase 3: Generating hero image...", "pipeline");
       let heroImageUrl: string | null = null;
+      let heroImagePrompt: string | null = null;
       try {
         // Get the main story data for hero image generation
         const mainStoryData = issue.mainStoryId
@@ -60,11 +61,16 @@ export class PublicationPipeline {
           : null;
 
         if (mainStoryData) {
-          heroImageUrl = await illustratorAgent.generateHeroImage(mainStoryData);
+          const imageResult = await illustratorAgent.generateHeroImage(mainStoryData);
+          if (imageResult) {
+            heroImageUrl = imageResult.imageUrl;
+            heroImagePrompt = imageResult.prompt;
+            log(`[Pipeline] Hero image generated: ${heroImageUrl}`, "pipeline");
+          }
         }
 
         if (!heroImageUrl) {
-          warnings.push("Hero image generation not available (placeholder)");
+          warnings.push("Hero image generation failed");
         }
       } catch (imageError) {
         warnings.push(`Hero image skipped: ${imageError}`);
@@ -79,6 +85,12 @@ export class PublicationPipeline {
         draft,
         issue.id
       );
+
+      // Update draft with hero image if generated
+      if (heroImageUrl && heroImagePrompt) {
+        await draftService.updateDraftImage(savedDraft.id, heroImageUrl, heroImagePrompt);
+        log(`[Pipeline] Hero image saved to draft`, "pipeline");
+      }
 
       log(`[Pipeline] Draft saved with ID: ${savedDraft.id}`, "pipeline");
 

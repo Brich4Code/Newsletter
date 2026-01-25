@@ -101,6 +101,20 @@ export class DraftService {
 
         return versions.length > 0 ? versions[0].versionNumber + 1 : 1;
     }
+
+    async updateDraftImage(id: string, imageUrl: string, imagePrompt: string): Promise<NewsletterDraft> {
+        const [draft] = await db.update(newsletterDrafts)
+            .set({
+                heroImageUrl: imageUrl,
+                heroImagePrompt: imagePrompt,
+                updatedAt: new Date()
+            })
+            .where(eq(newsletterDrafts.id, id))
+            .returning();
+
+        if (!draft) throw new Error("Draft not found");
+        return draft;
+    }
 }
 
 export const draftService = new DraftService();

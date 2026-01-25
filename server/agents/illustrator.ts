@@ -8,7 +8,7 @@ import type { Lead } from "@shared/schema";
  * Note: Placeholder for now - requires Imagen or similar image API setup
  */
 export class IllustratorAgent {
-  async generateHeroImage(mainStory: Lead): Promise<string | null> {
+  async generateHeroImage(mainStory: Lead): Promise<{ imageUrl: string; prompt: string } | null> {
     log("[Illustrator] Generating hero image...", "agent");
 
     try {
@@ -17,17 +17,35 @@ export class IllustratorAgent {
 
       log(`[Illustrator] Image prompt: ${imagePrompt}`, "agent");
 
-      // TODO: Integrate with Imagen API or Nano Banana
-      // For now, return a placeholder
-      // const imageUrl = await this.callImageAPI(imagePrompt);
+      // Generate image using Gemini service (Pollinations.ai)
+      const imageUrl = await geminiService.generateImage(imagePrompt);
 
-      // Placeholder: Return null until image API is configured
-      log("[Illustrator] Image generation not yet configured (placeholder)", "agent");
-      return null;
+      log(`[Illustrator] Image generated successfully: ${imageUrl}`, "agent");
+
+      return {
+        imageUrl,
+        prompt: imagePrompt
+      };
 
     } catch (error) {
       log(`[Illustrator] Error: ${error}`, "agent");
       return null;
+    }
+  }
+
+  /**
+   * Generate image from a custom prompt (for regeneration)
+   */
+  async generateFromPrompt(prompt: string): Promise<string> {
+    log("[Illustrator] Generating image from custom prompt...", "agent");
+
+    try {
+      const imageUrl = await geminiService.generateImage(prompt);
+      log(`[Illustrator] Image generated successfully: ${imageUrl}`, "agent");
+      return imageUrl;
+    } catch (error) {
+      log(`[Illustrator] Error: ${error}`, "agent");
+      throw error;
     }
   }
 
@@ -52,19 +70,6 @@ Return only the image prompt in 1-2 sentences.`;
     return imagePrompt.trim();
   }
 
-  /**
-   * Call image generation API (placeholder)
-   * TODO: Implement with Imagen or Nano Banana
-   */
-  private async callImageAPI(prompt: string): Promise<string> {
-    // Placeholder implementation
-    // In production, this would call:
-    // - Google Imagen API
-    // - Nano Banana API
-    // - or other image generation service
-
-    throw new Error("Image API not yet configured");
-  }
 }
 
 // Singleton instance

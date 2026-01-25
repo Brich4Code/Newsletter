@@ -123,6 +123,7 @@ export const newsletterDrafts = pgTable("newsletter_drafts", {
   status: text("status").notNull().default("draft"), // draft, published, archived
   googleDocsUrl: text("google_docs_url"),
   heroImageUrl: text("hero_image_url"),
+  heroImagePrompt: text("hero_image_prompt"), // Editable prompt for regenerating image
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
