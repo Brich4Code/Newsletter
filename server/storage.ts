@@ -80,7 +80,16 @@ export class DatabaseStorage implements IStorage {
 
   // Challenges
   async getChallenges(): Promise<Challenge[]> {
-    return db.select().from(challenges).orderBy(desc(challenges.createdAt));
+    // Only return challenges that are NOT assigned to any issue
+    // This ensures the shuffle feature shows only available (unused) challenges
+    const result = await db.execute(sql`
+      SELECT c.* FROM challenges c
+      WHERE NOT EXISTS (
+        SELECT 1 FROM issues WHERE issues.challenge_id = c.id
+      )
+      ORDER BY c.created_at DESC
+    `);
+    return result.rows as Challenge[];
   }
 
   async createChallenge(challenge: InsertChallenge): Promise<Challenge> {
