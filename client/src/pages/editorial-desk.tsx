@@ -23,6 +23,7 @@ import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, T
 import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/App";
+import { Link } from "wouter";
 
 export default function EditorialDesk() {
   const { user, logout } = useAuth();
@@ -398,6 +399,26 @@ export default function EditorialDesk() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          <Link href="/content">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span className="hidden lg:inline">Content Library</span>
+            </Button>
+          </Link>
+          <Link href="/editor/new">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <PenLine className="w-4 h-4" />
+              <span className="hidden lg:inline">New Draft</span>
+            </Button>
+          </Link>
           <div className="hidden md:flex items-center gap-2 mr-2 text-xs text-muted-foreground bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/30">
             <Database className="w-3 h-3 text-emerald-500" />
             <span className="text-emerald-500 font-medium">Connected</span>
