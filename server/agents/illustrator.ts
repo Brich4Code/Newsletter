@@ -51,8 +51,9 @@ export class IllustratorAgent {
 
   /**
    * Create an image generation prompt from the story
+   * Public method to allow generating prompts without images
    */
-  private async createImagePrompt(story: Lead): Promise<string> {
+  async createImagePrompt(story: Lead): Promise<string> {
     const prompt = `Create a vivid image generation prompt for this AI news story:
 
 Story Title: "${story.title}"
