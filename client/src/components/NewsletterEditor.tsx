@@ -24,7 +24,7 @@ const converter = new Showdown.Converter({
     tables: true,
     strikethrough: true,
     tasklists: true,
-    simpleLineBreaks: false,
+    simpleLineBreaks: true, // Convert single line breaks to <br>
     openLinksInNewWindow: true,
     emoji: true,
     underline: true,
