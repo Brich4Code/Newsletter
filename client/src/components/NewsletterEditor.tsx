@@ -180,14 +180,27 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
     // Update content when initialContent changes (e.g. loaded from DB)
     useEffect(() => {
         if (editor && initialContent) {
+            console.log('[NewsletterEditor] Loading content:', {
+                initialContentLength: initialContent.length,
+                initialContentPreview: initialContent.substring(0, 200)
+            });
+
             // Convert markdown to HTML for display
             const htmlContent = converter.makeHtml(initialContent);
+            console.log('[NewsletterEditor] Converted to HTML:', {
+                htmlLength: htmlContent.length,
+                htmlPreview: htmlContent.substring(0, 200)
+            });
+
             // Get current HTML to compare
             const currentHtml = editor.getHTML();
 
             // Only update if content is actually different (avoid unnecessary updates)
             if (currentHtml !== htmlContent) {
+                console.log('[NewsletterEditor] Setting content in editor');
                 editor.commands.setContent(htmlContent);
+            } else {
+                console.log('[NewsletterEditor] Content unchanged, skipping update');
             }
         }
     }, [initialContent, editor]);
