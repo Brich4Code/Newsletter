@@ -54,18 +54,20 @@ export class IllustratorAgent {
    * Public method to allow generating prompts without images
    */
   async createImagePrompt(story: Lead): Promise<string> {
-    const prompt = `Create a vivid image generation prompt for this AI news story:
+    const prompt = `Create a vivid, story-specific image generation prompt for this AI news story:
 
 Story Title: "${story.title}"
 Summary: ${story.summary}
 
 Requirements:
-- Style: Modern, geometric, vibrant colors, tech-forward
+- The image MUST visually represent the SPECIFIC story content, not just generic AI imagery
+- Include concrete visual elements or metaphors directly related to the story's main topic
+- Style: Modern, clean, vibrant colors, tech-forward but not overly abstract
 - Mood: Professional but approachable
-- Avoid: Text in image, specific faces, logos
-- Focus: Abstract representation of the concept
+- Avoid: Generic geometric patterns, text in image, specific faces, logos
+- Focus: A scene or composition that someone could look at and understand what the story is about
 
-Return only the image prompt in 1-2 sentences.`;
+Return only the image prompt in 2-3 sentences that describes a SPECIFIC scene related to this story.`;
 
     const imagePrompt = await geminiService.generateWithFlash(prompt);
     return imagePrompt.trim();
