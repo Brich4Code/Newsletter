@@ -99,17 +99,35 @@ export default function EditorPage() {
         }
     });
 
-    const generateImageMutation = useMutation({
+    const generatePromptMutation = useMutation({
         mutationFn: async () => {
-            const res = await fetch(`/api/drafts/${id}/generate-image`, {
+            const res = await fetch(`/api/drafts/${id}/generate-prompt`, {
                 method: "POST",
+            });
+            if (!res.ok) throw new Error("Failed to generate prompt");
+            return res.json();
+        },
+        onSuccess: (data) => {
+            setHeroImagePrompt(data.prompt);
+            toast.success("Prompt generated! Edit it and click 'Generate Hero Image'");
+        },
+        onError: () => {
+            toast.error("Failed to generate prompt");
+        }
+    });
+
+    const generateImageMutation = useMutation({
+        mutationFn: async (prompt: string) => {
+            const res = await fetch(`/api/drafts/${id}/regenerate-image`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt }),
             });
             if (!res.ok) throw new Error("Failed to generate image");
             return res.json();
         },
         onSuccess: (data) => {
             setHeroImageUrl(data.imageUrl);
-            setHeroImagePrompt(data.prompt);
             toast.success("Hero image generated!");
             queryClient.invalidateQueries({ queryKey: ["draft", id] });
         },
@@ -239,7 +257,7 @@ export default function EditorPage() {
                                     <Textarea
                                         value={heroImagePrompt}
                                         onChange={(e) => setHeroImagePrompt(e.target.value)}
-                                        placeholder="Enter or edit the image generation prompt..."
+                                        placeholder="Click 'Generate Pic Prompt' to create a prompt, then edit it if you like..."
                                         rows={3}
                                         className="resize-none"
                                     />
@@ -247,16 +265,37 @@ export default function EditorPage() {
 
                                 {/* Action Buttons */}
                                 <div className="flex gap-2">
-                                    {!heroImageUrl ? (
+                                    {!heroImagePrompt ? (
+                                        // No prompt yet - show "Generate Pic Prompt" button
                                         <Button
-                                            onClick={() => generateImageMutation.mutate()}
-                                            disabled={generateImageMutation.isPending}
+                                            onClick={() => generatePromptMutation.mutate()}
+                                            disabled={generatePromptMutation.isPending}
+                                            className="w-full"
+                                            variant="outline"
+                                        >
+                                            {generatePromptMutation.isPending ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Generating Prompt...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ImageIcon className="mr-2 h-4 w-4" />
+                                                    Generate Pic Prompt
+                                                </>
+                                            )}
+                                        </Button>
+                                    ) : !heroImageUrl ? (
+                                        // Has prompt but no image - show "Generate Hero Image" button
+                                        <Button
+                                            onClick={() => generateImageMutation.mutate(heroImagePrompt)}
+                                            disabled={generateImageMutation.isPending || !heroImagePrompt.trim()}
                                             className="w-full"
                                         >
                                             {generateImageMutation.isPending ? (
                                                 <>
                                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    Generating...
+                                                    Generating Image...
                                                 </>
                                             ) : (
                                                 <>
@@ -266,6 +305,7 @@ export default function EditorPage() {
                                             )}
                                         </Button>
                                     ) : (
+                                        // Has both prompt and image - show "Regenerate" button
                                         <Button
                                             onClick={() => regenerateImageMutation.mutate(heroImagePrompt)}
                                             disabled={regenerateImageMutation.isPending || !heroImagePrompt.trim()}

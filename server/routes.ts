@@ -427,6 +427,47 @@ export async function registerRoutes(
     }
   });
 
+  // Generate image prompt only (without creating the image)
+  app.post("/api/drafts/:id/generate-prompt", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const { illustratorAgent } = await import("./agents/illustrator");
+
+      const draft = await draftService.getDraft(req.params.id);
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+
+      // Extract title from content (first line or H1)
+      const titleMatch = draft.content.match(/^#\s+(.+)$/m) || draft.content.match(/^(.+)$/m);
+      const title = titleMatch ? titleMatch[1].trim() : `Newsletter Issue #${draft.issueNumber}`;
+
+      // Create a temporary Lead object for prompt generation
+      const tempLead = {
+        id: draft.id,
+        title,
+        summary: draft.content.substring(0, 500),
+        source: "Newsletter",
+        url: "",
+        relevanceScore: 0,
+        factCheckStatus: "pending",
+        primarySourceUrl: null,
+        note: null,
+        isManual: false,
+        createdAt: new Date(),
+        embedding: null,
+      };
+
+      // Generate only the prompt (not the image)
+      const prompt = await illustratorAgent["createImagePrompt"](tempLead);
+
+      res.json({ prompt });
+    } catch (error) {
+      console.error("Prompt generation error:", error);
+      res.status(500).json({ error: "Failed to generate prompt" });
+    }
+  });
+
   // Generate hero image for draft
   app.post("/api/drafts/:id/generate-image", requireAuth, async (req, res) => {
     try {
