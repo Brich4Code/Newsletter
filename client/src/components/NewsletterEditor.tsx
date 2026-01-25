@@ -148,9 +148,6 @@ const MenuBar = ({ editor }: { editor: any }) => {
 }
 
 export function NewsletterEditor({ initialContent, onSave, isSaving }: NewsletterEditorProps) {
-    // Convert markdown to HTML for TipTap
-    const initialHtml = converter.makeHtml(initialContent || "");
-
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -166,7 +163,7 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
                 },
             }),
         ],
-        content: initialHtml,
+        content: '', // Start empty, will be set by useEffect
         editorProps: {
             attributes: {
                 class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl m-5 focus:outline-none min-h-[500px]',
@@ -181,16 +178,16 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
     });
 
     // Update content when initialContent changes (e.g. loaded from DB)
-    // Be careful not to create loops if onUpdate triggers this
     useEffect(() => {
         if (editor && initialContent) {
-            // Only set content if it's significantly different to avoid cursor jumping
-            // or if the editor is empty.
-            // A simple comparison might be enough for now.
-            // Also helpful if we are switching drafts.
-            const currentMarkdown = turndownService.turndown(editor.getHTML());
-            if (currentMarkdown !== initialContent && !editor.isFocused) {
-                editor.commands.setContent(converter.makeHtml(initialContent));
+            // Convert markdown to HTML for display
+            const htmlContent = converter.makeHtml(initialContent);
+            // Get current HTML to compare
+            const currentHtml = editor.getHTML();
+
+            // Only update if content is actually different (avoid unnecessary updates)
+            if (currentHtml !== htmlContent) {
+                editor.commands.setContent(htmlContent);
             }
         }
     }, [initialContent, editor]);
