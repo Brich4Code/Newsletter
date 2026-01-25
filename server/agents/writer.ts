@@ -422,7 +422,10 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 2. **Preview Text** (Tease secondary story + one Weekly Scoop item) - Output ONLY the preview text, no label
 3. **Newsletter Title** (≤60 characters, fresh angle on main story) - Output ONLY the title text, no label
 4. **Welcome To This Week's Edition Of Jumble** (45-70 words, end with ⬇️) - Start with "Welcome to Jumble..."
-5. **In this newsletter:** (Exactly 5 bullets with emojis) - Output "In this newsletter:" followed by 5 bullets
+5. **In this newsletter:** (Exactly 5 bullets with emojis) - CRITICAL: Each bullet MUST be on its own line
+   - Output "In this newsletter:" on one line
+   - Then output 5 separate lines, each starting with an emoji
+   - Format: emoji + space + description (one per line)
 6. **Main Story** - MUST be a separate H1 header with emoji (e.g., "# 🤖 Your Story Title")
   - ~400 words with 2-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Main Story URL bank throughout the story
@@ -578,7 +581,7 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ Preview Text (just the text, NO "Section 2:" label)
 ✓ Newsletter Title (just the text, NO "Section 3:" label)
 ✓ Welcome message (starts with "Welcome to Jumble...")
-✓ "In this newsletter:" bullets (5 bullets with emojis)
+✓ "In this newsletter:" bullets (5 bullets with emojis, EACH ON A SEPARATE LINE)
 ✓ Main Story (separate H1 like "# 🤖 Title", ~400 words, with 5-7 embedded links)
 ✓ Secondary Story (separate H1 like "# 💡 Title", ~350 words, with 5-7 embedded links)
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
