@@ -30,6 +30,22 @@ export async function generateChallenges(): Promise<{ message: string; challenge
   return response.json();
 }
 
+export async function createCustomChallenge(challenge: { title: string; description: string; type: string }): Promise<Challenge> {
+  const response = await fetch(`${API_BASE}/challenges/custom`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(challenge),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create custom challenge");
+  }
+
+  return response.json();
+}
+
 export async function publishIssue(issue: InsertIssue): Promise<Issue> {
   const response = await fetch(`${API_BASE}/issues/publish`, {
     method: "POST",

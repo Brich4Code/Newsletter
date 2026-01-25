@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, generateChallenges, publishIssue, startResearch, startDeepDiveResearch, startMonthlyResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
+import { fetchLeads, fetchChallenges, generateChallenges, createCustomChallenge, publishIssue, startResearch, startDeepDiveResearch, startMonthlyResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,14 @@ export default function EditorialDesk() {
   // Notes for selected stories
   const [mainNote, setMainNote] = useState("");
   const [secondaryNote, setSecondaryNote] = useState("");
+
+  // Custom challenge dialog state
+  const [customChallengeOpen, setCustomChallengeOpen] = useState(false);
+  const [customChallenge, setCustomChallenge] = useState({
+    title: "",
+    description: "",
+    type: "creative",
+  });
 
   // Fetch leads from API
   const { data: leads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
@@ -212,6 +220,27 @@ export default function EditorialDesk() {
       toast({
         title: "Generation Failed",
         description: "Couldn't generate new challenges. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create custom challenge mutation
+  const createCustomChallengeMutation = useMutation({
+    mutationFn: createCustomChallenge,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["challenges"] });
+      setCustomChallengeOpen(false);
+      setCustomChallenge({ title: "", description: "", type: "creative" });
+      toast({
+        title: "Challenge Created",
+        description: "Your custom challenge has been added.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Creation Failed",
+        description: "Couldn't create the challenge. Please try again.",
         variant: "destructive",
       });
     },
@@ -916,20 +945,31 @@ export default function EditorialDesk() {
                   <label className="text-sm font-medium flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-primary" /> Weekly Challenge
                   </label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs text-muted-foreground hover:text-primary"
-                    onClick={() => generateChallengesMutation.mutate()}
-                    disabled={generateChallengesMutation.isPending}
-                  >
-                    {generateChallengesMutation.isPending ? (
-                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                    ) : (
-                      <Shuffle className="w-3 h-3 mr-1" />
-                    )}
-                    Shuffle
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => setCustomChallengeOpen(true)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Custom
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => generateChallengesMutation.mutate()}
+                      disabled={generateChallengesMutation.isPending}
+                    >
+                      {generateChallengesMutation.isPending ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      ) : (
+                        <Shuffle className="w-3 h-3 mr-1" />
+                      )}
+                      Shuffle
+                    </Button>
+                  </div>
                 </div>
 
                 {challengesLoading || generateChallengesMutation.isPending ? (
@@ -967,6 +1007,74 @@ export default function EditorialDesk() {
                     )}
                   </div>
                 )}
+
+                {/* Custom Challenge Dialog */}
+                <Dialog open={customChallengeOpen} onOpenChange={setCustomChallengeOpen}>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Create Custom Challenge</DialogTitle>
+                      <DialogDescription>
+                        Create your own weekly challenge for the newsletter.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="challenge-title">Title *</Label>
+                        <Input
+                          id="challenge-title"
+                          placeholder="e.g., Build a Personal Brand with AI"
+                          value={customChallenge.title}
+                          onChange={(e) => setCustomChallenge({ ...customChallenge, title: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="challenge-type">Type *</Label>
+                        <select
+                          id="challenge-type"
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          value={customChallenge.type}
+                          onChange={(e) => setCustomChallenge({ ...customChallenge, type: e.target.value })}
+                        >
+                          <option value="creative">Creative</option>
+                          <option value="productivity">Productivity</option>
+                          <option value="prompt_engineering">Prompt Engineering</option>
+                          <option value="no_code">No Code</option>
+                        </select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="challenge-description">Description *</Label>
+                        <Textarea
+                          id="challenge-description"
+                          placeholder="Describe the challenge with 4-7 clear steps (120-150 words recommended)"
+                          value={customChallenge.description}
+                          onChange={(e) => setCustomChallenge({ ...customChallenge, description: e.target.value })}
+                          rows={6}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setCustomChallengeOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => createCustomChallengeMutation.mutate(customChallenge)}
+                        disabled={!customChallenge.title || !customChallenge.description || createCustomChallengeMutation.isPending}
+                      >
+                        {createCustomChallengeMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>Create Challenge</>
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </section>
             </div>
 

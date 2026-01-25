@@ -240,6 +240,30 @@ export async function registerRoutes(
     }
   });
 
+  // Create custom challenge
+  app.post("/api/challenges/custom", requireAuth, async (req, res) => {
+    try {
+      console.log("[API] Creating custom challenge...");
+      const { title, description, type } = req.body;
+
+      if (!title || !description || !type) {
+        return res.status(400).json({ error: "Missing required fields: title, description, type" });
+      }
+
+      const challenge = await storage.createChallenge({
+        title,
+        description,
+        type,
+      });
+
+      console.log(`[API] Custom challenge created: ${title}`);
+      res.status(200).json(challenge);
+    } catch (error) {
+      console.error("[API] Failed to create custom challenge:", error);
+      res.status(500).json({ error: "Failed to create custom challenge" });
+    }
+  });
+
   // Get all issues
   app.get("/api/issues", requireAuth, async (req, res) => {
     try {
