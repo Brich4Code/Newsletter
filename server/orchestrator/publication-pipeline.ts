@@ -132,6 +132,7 @@ export class PublicationPipeline {
         quickLinkTopics.push({
           title: lead.title,
           url: lead.url,
+          note: lead.note || undefined,
         });
       }
     }
@@ -140,13 +141,26 @@ export class PublicationPipeline {
       ? await storage.getChallengeById(issue.challengeId)
       : null;
 
+    // Log notes for debugging
+    if (mainStoryData?.note) {
+      log(`[Pipeline] Main story has editorial note: "${mainStoryData.note}"`, "pipeline");
+    }
+    if (secondaryStoryData?.note) {
+      log(`[Pipeline] Secondary story has editorial note: "${secondaryStoryData.note}"`, "pipeline");
+    }
+    for (const topic of quickLinkTopics) {
+      if (topic.note) {
+        log(`[Pipeline] Quick link "${topic.title}" has editorial note: "${topic.note}"`, "pipeline");
+      }
+    }
+
     // Convert to simple format
     return {
       mainStory: mainStoryData
-        ? { title: mainStoryData.title, url: mainStoryData.url }
+        ? { title: mainStoryData.title, url: mainStoryData.url, note: mainStoryData.note || undefined }
         : { title: "AI News Update" }, // Fallback if main story missing
       secondaryStory: secondaryStoryData
-        ? { title: secondaryStoryData.title, url: secondaryStoryData.url }
+        ? { title: secondaryStoryData.title, url: secondaryStoryData.url, note: secondaryStoryData.note || undefined }
         : undefined,
       quickLinks: quickLinkTopics.length > 0 ? quickLinkTopics : undefined,
       challenge: challengeData

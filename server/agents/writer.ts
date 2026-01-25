@@ -4,12 +4,25 @@ import { NewsletterStyleGuide } from "../config/style-guide";
 import { log } from "../index";
 
 /**
+ * Escape special characters that could break template literals
+ * Handles backticks, ${} expressions, and backslashes
+ */
+function escapeForTemplateLiteral(str: string | undefined | null): string {
+  if (!str) return '';
+  return str
+    .replace(/\\/g, '\\\\')     // Escape backslashes first
+    .replace(/`/g, '\\`')       // Escape backticks
+    .replace(/\$\{/g, '\\${');  // Escape template expressions
+}
+
+/**
  * Simple story topic - just a title and optional URL
  * AI will research and fact-check using grounded search
  */
 export interface StoryTopic {
   title: string;
   url?: string; // Optional - AI can find sources if not provided
+  note?: string; // Editorial note to guide LLM when writing about this story
 }
 
 /**
@@ -80,10 +93,14 @@ export class WriterAgent {
   private async researchStories(content: SimpleIssueContent): Promise<string> {
     const researchPrompts: { category: string; prompt: string }[] = [];
 
-    // Main story research
+    // Main story research - escape all dynamic content
+    const mainTitle = escapeForTemplateLiteral(content.mainStory.title);
+    const mainUrl = escapeForTemplateLiteral(content.mainStory.url);
+    const mainNote = escapeForTemplateLiteral(content.mainStory.note);
+
     researchPrompts.push({
       category: "Main Story",
-      prompt: `Research this AI news story in detail: "${content.mainStory.title}"${content.mainStory.url ? `\nOriginal source: ${content.mainStory.url}` : ''}
+      prompt: `Research this AI news story in detail: "${mainTitle}"${mainUrl ? `\nOriginal source: ${mainUrl}` : ''}${mainNote ? `\n\n📝 EDITORIAL NOTE: ${mainNote}` : ''}
 
 🔍 CRITICAL: Find exactly 5-7 different reputable source URLs for this story.
 
@@ -101,11 +118,15 @@ Requirements:
 - Prefer primary sources (official announcements, company blogs) when available`,
     });
 
-    // Secondary story research
+    // Secondary story research - escape all dynamic content
     if (content.secondaryStory) {
+      const secondaryTitle = escapeForTemplateLiteral(content.secondaryStory.title);
+      const secondaryUrl = escapeForTemplateLiteral(content.secondaryStory.url);
+      const secondaryNote = escapeForTemplateLiteral(content.secondaryStory.note);
+
       researchPrompts.push({
         category: "Secondary Story",
-        prompt: `Research this AI news story: "${content.secondaryStory.title}"${content.secondaryStory.url ? `\nOriginal source: ${content.secondaryStory.url}` : ''}
+        prompt: `Research this AI news story: "${secondaryTitle}"${secondaryUrl ? `\nOriginal source: ${secondaryUrl}` : ''}${secondaryNote ? `\n\n📝 EDITORIAL NOTE: ${secondaryNote}` : ''}
 
 🔍 CRITICAL: Find exactly 5-7 different reputable source URLs for this story.
 
@@ -122,13 +143,17 @@ Requirements:
       });
     }
 
-    // Weekly Scoop research
+    // Weekly Scoop research - escape all dynamic content
     if (content.quickLinks && content.quickLinks.length > 0) {
       // Research provided quick links - get exactly 1 URL per story
       content.quickLinks.forEach((link, i) => {
+        const linkTitle = escapeForTemplateLiteral(link.title);
+        const linkUrl = escapeForTemplateLiteral(link.url);
+        const linkNote = escapeForTemplateLiteral(link.note);
+
         researchPrompts.push({
           category: `Weekly Scoop #${i + 1}`,
-          prompt: `Research this AI news item: "${link.title}"${link.url ? `\nSource: ${link.url}` : ''}
+          prompt: `Research this AI news item: "${linkTitle}"${linkUrl ? `\nSource: ${linkUrl}` : ''}${linkNote ? `\n\n📝 EDITORIAL NOTE: ${linkNote}` : ''}
 
 🔍 CRITICAL: Find exactly 1 working source URL for this story.
 
@@ -155,11 +180,14 @@ Total: 6 stories = 6 URLs`,
       });
     }
 
-    // Weekly Challenge research
+    // Weekly Challenge research - escape all dynamic content
     if (content.challenge) {
+      const challengeTitle = escapeForTemplateLiteral(content.challenge.title);
+      const challengeDescription = escapeForTemplateLiteral(content.challenge.description);
+
       researchPrompts.push({
         category: "Weekly Challenge",
-        prompt: `Find resources for this weekly challenge: "${content.challenge.title}"${content.challenge.description ? `\nDescription: ${content.challenge.description}` : ''}
+        prompt: `Find resources for this weekly challenge: "${challengeTitle}"${challengeDescription ? `\nDescription: ${challengeDescription}` : ''}
 
 Find:
 - Tutorial links (especially YouTube videos)
