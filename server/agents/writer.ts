@@ -274,8 +274,8 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
       missing.push('Welcome section');
     }
 
-    // Check for "In this newsletter" bullet list (emojis followed by text)
-    if (!/In this newsletter|In today's newsletter/i.test(draft)) {
+    // Check for "In this newsletter" bullet list (handle curly apostrophes)
+    if (!/In this newsletter|In today.s newsletter/i.test(draft)) {
       missing.push('In this newsletter bullets');
     }
 
@@ -825,12 +825,18 @@ ${currentWords < targetWords
 
 Output ONLY the rewritten section with no explanations or conversational text.`;
 
-    const rewritten = await geminiService.generateWithPro(rewritePrompt, {
+    const result = await geminiService.generateWithProDetailed(rewritePrompt, {
       temperature: 0.4, // Lower temp for precision
-      maxTokens: 16384, // Increased from 4096 to avoid truncation
+      maxTokens: 32768, // Increased to avoid truncation
     });
 
-    return rewritten.trim();
+    // If the rewrite was truncated, keep the original to avoid corrupted content
+    if (result.wasTruncated) {
+      log(`[Writer] ⚠️ Rewrite was truncated, keeping original section (${currentWords} words)`, "agent");
+      return section;
+    }
+
+    return result.text.trim();
   }
 
 }
