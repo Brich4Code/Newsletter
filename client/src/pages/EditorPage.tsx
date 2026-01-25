@@ -105,13 +105,17 @@ export default function EditorPage() {
                 method: "POST",
             });
             if (!res.ok) throw new Error("Failed to generate prompt");
-            return res.json();
+            const data = await res.json();
+            console.log('[EditorPage] Received prompt data:', data);
+            return data;
         },
         onSuccess: (data) => {
+            console.log('[EditorPage] Setting prompt:', data.prompt);
             setHeroImagePrompt(data.prompt);
             toast.success("Prompt generated! Edit it and click 'Generate Hero Image'");
         },
-        onError: () => {
+        onError: (error) => {
+            console.error('[EditorPage] Prompt generation error:', error);
             toast.error("Failed to generate prompt");
         }
     });
@@ -265,6 +269,8 @@ export default function EditorPage() {
 
                                 {/* Action Buttons */}
                                 <div className="flex gap-2">
+                                    {/* Debug: show current state */}
+                                    {console.log('[EditorPage] Button logic - heroImagePrompt:', heroImagePrompt, 'heroImageUrl:', heroImageUrl)}
                                     {!heroImagePrompt ? (
                                         // No prompt yet - show "Generate Pic Prompt" button
                                         <Button

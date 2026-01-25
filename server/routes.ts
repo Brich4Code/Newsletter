@@ -438,30 +438,30 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Draft not found" });
       }
 
-      // Extract title from content (first line or H1)
-      const titleMatch = draft.content.match(/^#\s+(.+)$/m) || draft.content.match(/^(.+)$/m);
-      const title = titleMatch ? titleMatch[1].trim() : `Newsletter Issue #${draft.issueNumber}`;
+      // Get the issue to find the main story
+      if (!draft.issueId) {
+        return res.status(400).json({ error: "Draft has no associated issue" });
+      }
 
-      // Create a temporary Lead object for prompt generation
-      const tempLead = {
-        id: draft.id,
-        title,
-        summary: draft.content.substring(0, 500),
-        source: "Newsletter",
-        url: "",
-        relevanceScore: 0,
-        factCheckStatus: "pending" as const,
-        primarySourceUrl: null,
-        note: null,
-        isManual: false,
-        createdAt: new Date(),
-        embedding: null,
-      };
+      const issue = await storage.getIssueById(draft.issueId);
+      if (!issue) {
+        return res.status(404).json({ error: "Issue not found" });
+      }
 
-      // Generate only the prompt (not the image)
-      const prompt = await illustratorAgent.createImagePrompt(tempLead);
+      if (!issue.mainStoryId) {
+        return res.status(400).json({ error: "Issue has no main story" });
+      }
 
-      console.log(`[API] Generated prompt for draft ${req.params.id}: "${prompt}"`);
+      // Get the actual main story Lead (just like publication pipeline does)
+      const mainStory = await storage.getLeadById(issue.mainStoryId);
+      if (!mainStory) {
+        return res.status(404).json({ error: "Main story not found" });
+      }
+
+      // Generate prompt from the actual main story
+      const prompt = await illustratorAgent.createImagePrompt(mainStory);
+
+      console.log(`[API] Generated prompt for draft ${req.params.id} from main story "${mainStory.title}": "${prompt}"`);
       res.json({ prompt });
     } catch (error) {
       console.error("Prompt generation error:", error);
