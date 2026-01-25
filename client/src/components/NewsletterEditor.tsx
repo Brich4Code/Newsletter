@@ -190,8 +190,9 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
     });
 
     // Update content when initialContent changes (e.g. loaded from DB)
+    // IMPORTANT: Only update when editor is NOT focused (not actively being edited)
     useEffect(() => {
-        if (editor && initialContent) {
+        if (editor && initialContent && !editor.isFocused) {
             console.log('[NewsletterEditor] Loading content:', {
                 initialContentLength: initialContent.length,
                 initialContentPreview: initialContent.substring(0, 200)
@@ -204,11 +205,11 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
                 htmlPreview: htmlContent.substring(0, 200)
             });
 
-            // Get current HTML to compare
-            const currentHtml = editor.getHTML();
+            // Get current markdown to compare (more reliable than HTML comparison)
+            const currentMarkdown = turndownService.turndown(editor.getHTML());
 
             // Only update if content is actually different (avoid unnecessary updates)
-            if (currentHtml !== htmlContent) {
+            if (currentMarkdown.trim() !== initialContent.trim()) {
                 console.log('[NewsletterEditor] Setting content in editor');
                 editor.commands.setContent(htmlContent);
             } else {
