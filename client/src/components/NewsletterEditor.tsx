@@ -221,6 +221,47 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
         <div className="flex flex-col min-h-[600px] border rounded-lg shadow-sm bg-card">
             <MenuBar editor={editor} />
             <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950 px-8 py-6 min-h-[500px]">
+                <style>{`
+                    .ProseMirror {
+                        outline: none;
+                        min-height: 500px;
+                    }
+                    .ProseMirror h1 {
+                        font-size: 1.875rem;
+                        font-weight: 700;
+                        margin-top: 2rem;
+                        margin-bottom: 1rem;
+                        line-height: 1.2;
+                    }
+                    .ProseMirror h2 {
+                        font-size: 1.5rem;
+                        font-weight: 600;
+                        margin-top: 1.5rem;
+                        margin-bottom: 0.75rem;
+                        line-height: 1.3;
+                    }
+                    .ProseMirror p {
+                        margin-bottom: 1rem;
+                        line-height: 1.75;
+                    }
+                    .ProseMirror a {
+                        color: #2563eb;
+                        text-decoration: underline;
+                    }
+                    .ProseMirror ul, .ProseMirror ol {
+                        margin: 1rem 0;
+                        padding-left: 1.5rem;
+                    }
+                    .ProseMirror li {
+                        margin: 0.5rem 0;
+                    }
+                    .ProseMirror blockquote {
+                        border-left: 4px solid #e5e7eb;
+                        padding-left: 1rem;
+                        margin: 1rem 0;
+                        font-style: italic;
+                    }
+                `}</style>
                 <EditorContent editor={editor} />
             </div>
             <div className="p-2 border-t bg-muted/20 text-xs text-muted-foreground flex justify-end">
