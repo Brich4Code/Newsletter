@@ -353,6 +353,44 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
   }
 
   /**
+   * Validate that main and secondary stories have embedded URLs
+   * Stories should have 5-7 embedded links each
+   */
+  private validateStoryLinks(draft: string): { valid: boolean; issues: string[] } {
+    const issues: string[] = [];
+
+    // Find all H1 headers
+    const h1Headers = Array.from(draft.matchAll(/^#\s+[^\n]+$/gm));
+    if (h1Headers.length < 2) {
+      return { valid: true, issues }; // Can't validate if stories not found
+    }
+
+    // Extract main story (first H1 to second H1)
+    const firstH1Index = h1Headers[0].index!;
+    const secondH1Index = h1Headers[1].index!;
+    const mainStory = draft.substring(firstH1Index, secondH1Index);
+
+    // Count embedded links in main story [text](url)
+    const mainLinks = (mainStory.match(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g) || []).length;
+    if (mainLinks < 3) {
+      issues.push(`Main story has only ${mainLinks} embedded links (need at least 5-7)`);
+    }
+
+    // Extract secondary story (second H1 to Weekly Scoop or end)
+    const weeklyScoopMatch = draft.match(/##?\s+Weekly Scoop/i);
+    const weeklyScoopIndex = weeklyScoopMatch ? draft.indexOf(weeklyScoopMatch[0]) : draft.length;
+    const secondaryStory = draft.substring(secondH1Index, weeklyScoopIndex);
+
+    // Count embedded links in secondary story
+    const secondaryLinks = (secondaryStory.match(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g) || []).length;
+    if (secondaryLinks < 3) {
+      issues.push(`Secondary story has only ${secondaryLinks} embedded links (need at least 5-7)`);
+    }
+
+    return { valid: issues.length === 0, issues };
+  }
+
+  /**
    * Phase 2: Write newsletter using Gemini Flash Preview with style guide
    * AI crafts the final newsletter following all rules
    * Includes retry logic for truncation and validation
@@ -604,9 +642,10 @@ CRITICAL OUTPUT INSTRUCTIONS:
       // Validate completeness
       const completionCheck = this.isNewsletterComplete(draft);
       const scoopCheck = this.validateWeeklyScoop(draft);
-      lastIssues = [...completionCheck.missing, ...scoopCheck.issues];
+      const storyLinksCheck = this.validateStoryLinks(draft);
+      lastIssues = [...completionCheck.missing, ...scoopCheck.issues, ...storyLinksCheck.issues];
 
-      if (completionCheck.complete && scoopCheck.valid) {
+      if (completionCheck.complete && scoopCheck.valid && storyLinksCheck.valid) {
         log(`[Writer] ✅ Newsletter validation passed on attempt ${attempt}`, "agent");
         break;
       }
@@ -620,6 +659,9 @@ CRITICAL OUTPUT INSTRUCTIONS:
       }
       if (scoopCheck.issues.length > 0) {
         log(`[Writer] ⚠️ Weekly Scoop issues: ${scoopCheck.issues.join(', ')}`, "agent");
+      }
+      if (storyLinksCheck.issues.length > 0) {
+        log(`[Writer] ⚠️ Story link issues: ${storyLinksCheck.issues.join(', ')}`, "agent");
       }
 
       if (attempt < MAX_RETRIES) {
