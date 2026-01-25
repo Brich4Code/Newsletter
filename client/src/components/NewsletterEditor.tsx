@@ -173,9 +173,11 @@ export function NewsletterEditor({ initialContent, onSave, isSaving }: Newslette
         extensions: [
             StarterKit,
             Link.configure({
-                openOnClick: false,
+                openOnClick: true,
                 HTMLAttributes: {
-                    class: 'text-primary underline cursor-pointer',
+                    class: 'text-primary underline cursor-pointer hover:text-primary/80',
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
                 },
             }),
             Image.configure({
