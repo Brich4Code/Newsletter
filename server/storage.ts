@@ -25,6 +25,7 @@ export interface IStorage {
 
   // Issues
   getIssues(): Promise<Issue[]>;
+  getIssueById(id: string): Promise<Issue | undefined>;
   getLatestIssue(): Promise<Issue | undefined>;
   createIssue(issue: InsertIssue): Promise<Issue>;
   updateIssue(id: string, updates: Partial<Issue>): Promise<Issue>;
@@ -106,6 +107,11 @@ export class DatabaseStorage implements IStorage {
   // Issues
   async getIssues(): Promise<Issue[]> {
     return db.select().from(issues).orderBy(desc(issues.publishedAt));
+  }
+
+  async getIssueById(id: string): Promise<Issue | undefined> {
+    const [issue] = await db.select().from(issues).where(eq(issues.id, id)).limit(1);
+    return issue;
   }
 
   async getLatestIssue(): Promise<Issue | undefined> {
