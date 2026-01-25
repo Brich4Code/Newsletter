@@ -77,6 +77,21 @@ export async function startDeepDiveResearch(): Promise<{ status: string; message
   return response.json();
 }
 
+export async function startMonthlyResearch(): Promise<{ status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/research/monthly`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to start monthly research");
+  }
+
+  return response.json();
+}
+
 export async function deleteLead(id: string): Promise<{ success: boolean }> {
   const response = await fetch(`${API_BASE}/leads/${id}`, {
     method: "DELETE",

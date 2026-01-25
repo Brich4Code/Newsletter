@@ -292,6 +292,26 @@ export async function registerRoutes(
     }
   });
 
+  // Monthly Research Endpoint (comprehensive 30-day search with expanded topics)
+  app.post("/api/research/monthly", requireAuth, async (req, res) => {
+    try {
+      // Trigger research in background
+      researchOrchestrator.runCycle("monthly").then(() => {
+        console.log("[API] Monthly research cycle completed");
+      }).catch((error) => {
+        console.error("[API] Monthly research cycle failed:", error);
+      });
+
+      res.status(200).json({
+        status: "started",
+        mode: "monthly",
+        message: "Monthly search started. Searching last 30 days across AI, science, and health topics...",
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to start monthly research" });
+    }
+  });
+
   // Publish a new issue
   app.post("/api/issues/publish", requireAuth, async (req, res) => {
     try {
