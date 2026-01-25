@@ -16,19 +16,26 @@ export class ChallengeGeneratorAgent {
 REQUIREMENTS:
 - Accessible to non-experts (no coding required unless it's low-code/no-code like Zapier/Make)
 - Solvable in 20-60 minutes
-- Use ONLY the LATEST AI tools from 2026 (GPT-4.5/ChatGPT-4o, Claude 3.7 Opus/Sonnet, Gemini 2.5+, NotebookLM, Midjourney v7, Perplexity, Gamma, DALL-E 4, Suno v4, RunwayML Gen-4, etc.)
-- NO outdated tools (anything pre-2026 like GPT-3.5, Claude 3.5, Gemini 2.0, Midjourney v6, etc.)
+- Use ONLY the LATEST AI tools from January 2026:
+  * GPT-5.2 (Instant/Thinking/Pro), ChatGPT
+  * Claude Opus 4.5, Claude Sonnet 4.5
+  * Gemini 3 Flash, Gemini 3 Pro
+  * Midjourney V7, Niji 7
+  * DALL-E 3
+  * Suno v4.5
+  * RunwayML Gen-4
+  * NotebookLM, Perplexity, Gamma
+- NO outdated tools (anything older than late 2025)
 - Focus on "doing something cool" or "saving time" with cutting-edge AI
 - FUN and engaging (not just "summarize an email")
 - Should require 4-7 clear steps to complete
-- Use tools that exist in early 2026 (be realistic about what's available)
 
 Examples of good challenges:
-- "Create a family recipe book using ChatGPT-4o and Midjourney v7"
+- "Create a family recipe book using GPT-5.2 and Midjourney V7"
 - "Build a presentation with Gamma AI in under 10 minutes"
 - "Use NotebookLM to create a podcast from your meeting notes"
-- "Generate a personalized workout plan with Claude 3.7 and track it in Notion"
-- "Create a music video using Suno v4 and RunwayML Gen-4"
+- "Generate a personalized workout plan with Claude Opus 4.5 and track it in Notion"
+- "Create a music video using Suno v4.5 and RunwayML Gen-4"
 
 Each challenge should have:
 - Catchy title (under 60 chars)
