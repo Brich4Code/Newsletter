@@ -351,5 +351,81 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== DRAFT ROUTES ====================
+
+  // List all drafts
+  app.get("/api/drafts", requireAuth, async (req, res) => {
+    try {
+      // Lazy import to avoid circular dependency issues if any
+      const { draftService } = await import("./services/draft-service");
+      const drafts = await draftService.listDrafts();
+      res.json(drafts);
+    } catch (error) {
+      console.error("List drafts error:", error);
+      res.status(500).json({ error: "Failed to fetch drafts" });
+    }
+  });
+
+  // Get draft by ID
+  app.get("/api/drafts/:id", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const draft = await draftService.getDraft(req.params.id);
+      if (!draft) return res.status(404).json({ error: "Draft not found" });
+      res.json(draft);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch draft" });
+    }
+  });
+
+  // Get draft by Issue Number
+  app.get("/api/drafts/issue/:issueNumber", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const draft = await draftService.getDraftByIssue(parseInt(req.params.issueNumber));
+      if (!draft) return res.status(404).json({ error: "Draft not found" });
+      res.json(draft);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch draft" });
+    }
+  });
+
+  // Create new draft
+  app.post("/api/drafts", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const { issueNumber, content, issueId } = req.body;
+      const draft = await draftService.createDraft(issueNumber, content, issueId);
+      res.status(201).json(draft);
+    } catch (error) {
+      console.error("Create draft error:", error);
+      res.status(500).json({ error: "Failed to create draft" });
+    }
+  });
+
+  // Update draft (Auto-save)
+  app.patch("/api/drafts/:id", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const { content } = req.body;
+      const draft = await draftService.updateDraft(req.params.id, content);
+      res.json(draft);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update draft" });
+    }
+  });
+
+  // Publish draft
+  app.post("/api/drafts/:id/publish", requireAuth, async (req, res) => {
+    try {
+      const { draftService } = await import("./services/draft-service");
+      const draft = await draftService.publishDraft(req.params.id);
+      res.json(draft);
+    } catch (error) {
+      console.error("Publish error:", error);
+      res.status(500).json({ error: "Failed to publish draft" });
+    }
+  });
+
   return httpServer;
 }
