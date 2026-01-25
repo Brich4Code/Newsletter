@@ -45,7 +45,7 @@ export interface SimpleIssueContent {
  * NEW APPROACH - Leverage AI's native power:
  * 1. Phase 1 (Perplexity): Research stories with verified URLs and fact-checking (full research, no condensation)
  * 2. Phase 2 (Gemini Flash Preview): Write newsletter following style guide
- * 3. Phase 3 (Auto Word Count Fix): Validate 325-400 words, rewrite if needed (preserves links)
+ * 3. Phase 3 (Auto Word Count Fix): Validate 325-450 words, rewrite if needed (preserves links)
  *
  * REMOVED:
  * - Pre-fetched story summaries
@@ -74,7 +74,7 @@ export class WriterAgent {
       log("[Writer Phase 2] Writing newsletter...", "agent");
       let draft = await this.writeNewsletter(research, issueNumber);
 
-      // Phase 3: Validate and fix word counts (325-400 words per story)
+      // Phase 3: Validate and fix word counts (325-450 words per story)
       log("[Writer Phase 3] Validating word counts...", "agent");
       draft = await this.validateAndFixWordCounts(draft);
 
@@ -262,33 +262,54 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
 
   /**
    * Check if the newsletter draft is complete (has all required sections)
+   * Note: We no longer check for labeled sections like "Subject Line:" since
+   * we told the AI to output content without labels. Instead we check for
+   * structural elements that should be present.
    */
   private isNewsletterComplete(draft: string): { complete: boolean; missing: string[] } {
-    const requiredSections = [
-      { name: 'Subject Line', pattern: /Subject Line/i },
-      { name: 'Preview Text', pattern: /Preview Text/i },
-      { name: 'Newsletter Title', pattern: /Newsletter Title/i },
-      { name: 'Welcome', pattern: /Welcome/i },
-      { name: 'In this newsletter', pattern: /In this newsletter|In today's newsletter/i },
-      { name: 'Main Story H1', pattern: /^#\s+[^\n]+/m },
-      { name: 'Weekly Scoop', pattern: /Weekly Scoop/i },
-      { name: 'Weekly Challenge', pattern: /Weekly Challenge|Challenge:/i },
-      { name: 'Wrap Up', pattern: /Wrap Up|wrap.up/i },
-      { name: 'Sources', pattern: /Sources|##?\s+Sources/i },
-    ];
-
     const missing: string[] = [];
-    for (const section of requiredSections) {
-      if (!section.pattern.test(draft)) {
-        missing.push(section.name);
-      }
+
+    // Check for Welcome section (should contain "Welcome to Jumble" or similar)
+    if (!/Welcome to Jumble|Welcome to this week/i.test(draft)) {
+      missing.push('Welcome section');
     }
 
-    // Also check for mid-sentence truncation (ends without proper punctuation)
+    // Check for "In this newsletter" bullet list (emojis followed by text)
+    if (!/In this newsletter|In today's newsletter/i.test(draft)) {
+      missing.push('In this newsletter bullets');
+    }
+
+    // Check for at least 2 H1 headers (main and secondary stories)
+    const h1Count = (draft.match(/^#\s+[^\n]+/gm) || []).length;
+    if (h1Count < 2) {
+      missing.push(`Story H1 headers (found ${h1Count}, need 2)`);
+    }
+
+    // Check for Weekly Scoop section
+    if (!/Weekly Scoop/i.test(draft)) {
+      missing.push('Weekly Scoop');
+    }
+
+    // Check for Weekly Challenge section
+    if (!/Weekly Challenge|Challenge:/i.test(draft)) {
+      missing.push('Weekly Challenge');
+    }
+
+    // Check for Wrap Up section
+    if (!/Wrap Up|wrap.up/i.test(draft)) {
+      missing.push('Wrap Up');
+    }
+
+    // Check for Sources section
+    if (!/##?\s*Sources/i.test(draft)) {
+      missing.push('Sources');
+    }
+
+    // Check for proper ending (not cut off mid-sentence)
     const trimmed = draft.trim();
-    const endsWithPunctuation = /[.!?)\]"]$/.test(trimmed) || trimmed.endsWith('---');
+    const endsWithPunctuation = /[.!?)\]":]$/.test(trimmed) || trimmed.endsWith('---');
     if (!endsWithPunctuation) {
-      missing.push('Proper ending (content appears cut off mid-sentence)');
+      missing.push('Proper ending (content appears cut off)');
     }
 
     return { complete: missing.length === 0, missing };
@@ -373,7 +394,17 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 8. **Weekly Scoop 📢** - Output as "## Weekly Scoop 📢" followed by 6 headlines
   - Each headline: emoji + [markdown link](url)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
-9. **Weekly Challenge** (150-200 words) - Output as "## Weekly Challenge" followed by content
+9. **Weekly Challenge** (150-200 words) - Output as "## Weekly Challenge" followed by:
+  - Brief intro explaining the challenge (1-2 sentences)
+  - Optional: YouTube video embed if relevant
+  - 3-5 numbered steps, each with a unique emoji prefix
+  - Format each step as: "🎁 Step 1: [Title]" followed by 1-2 sentences of instructions
+  - Example format:
+    🎁 Step 1: Pick your constraints
+    Give ChatGPT your rules in one message...
+
+    🍪 Step 2: Turn one idea into action
+    Have ChatGPT generate two options...
 10. **Wrap Up** (Bold 1-2 lines inviting replies) - Output as "## Wrap Up" followed by content
 11. **Sources** - Output as "## Sources" with URLs grouped by category
 
@@ -419,7 +450,19 @@ Secondary story content...
 
 ## Weekly Challenge
 
-Challenge content...
+This week, try building your first AI workflow with no-code tools.
+
+🎁 Step 1: Pick your task
+Choose one repetitive chore that takes 10 minutes of your day.
+
+🍪 Step 2: Set the trigger
+Use Zapier or Make to create a trigger for when new content arrives.
+
+🎶 Step 3: Connect the AI
+Add a step to send content to ChatGPT or Claude with a simple prompt.
+
+📸 Step 4: Define the output
+Tell the tool where to send the result: Slack, email, or notes app.
 
 ## Wrap Up
 
@@ -503,7 +546,7 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
   - ✅ 🤖 [Headline text](https://url.com) = CORRECT
   - ❌ 🤖 Headline text = WRONG (missing URL)
-✓ Weekly Challenge (150-200 words)
+✓ Weekly Challenge (150-200 words with emoji-prefixed steps like "🎁 Step 1: Title")
 ✓ Wrap Up
 ✓ Sources section
 
@@ -596,7 +639,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
 
   /**
    * Phase 3: Validate word counts for main and secondary stories
-   * Ensures both stories are between 325-400 words
+   * Ensures both stories are between 325-450 words (50 word tolerance over 400)
    * Auto-fixes if out of range while preserving all embedded links
    */
   private async validateAndFixWordCounts(draft: string): Promise<string> {
@@ -613,6 +656,10 @@ CRITICAL OUTPUT INSTRUCTIONS:
     let updatedDraft = draft;
     let needsRewrite = false;
 
+    // Word count limits: 325-450 (50 word tolerance over target of 400)
+    const MIN_WORDS = 325;
+    const MAX_WORDS = 450;
+
     // Check main story word count
     if (sections.mainStory) {
       const mainWordCount = this.countWords(sections.mainStory.content);
@@ -622,9 +669,9 @@ CRITICAL OUTPUT INSTRUCTIONS:
       if (mainWordCount < 100) {
         log(`[Writer] ⚠️ Main story word count suspiciously low (${mainWordCount}). Skipping rewrite to avoid errors.`, "agent");
         log(`[Writer] Main story content length: ${sections.mainStory.content.length} chars`, "agent");
-      } else if (mainWordCount < 325 || mainWordCount > 400) {
-        log(`[Writer] Main story out of range (325-400). Rewriting to 350 words...`, "agent");
-        const rewritten = await this.rewriteToWordCount(sections.mainStory.content, 350);
+      } else if (mainWordCount < MIN_WORDS || mainWordCount > MAX_WORDS) {
+        log(`[Writer] Main story out of range (${MIN_WORDS}-${MAX_WORDS}). Rewriting to 375 words...`, "agent");
+        const rewritten = await this.rewriteToWordCount(sections.mainStory.content, 375);
         updatedDraft = updatedDraft.replace(sections.mainStory.content, rewritten);
         needsRewrite = true;
       }
@@ -639,9 +686,9 @@ CRITICAL OUTPUT INSTRUCTIONS:
       if (secondaryWordCount < 100) {
         log(`[Writer] ⚠️ Secondary story word count suspiciously low (${secondaryWordCount}). Skipping rewrite to avoid errors.`, "agent");
         log(`[Writer] Secondary story content length: ${sections.secondaryStory.content.length} chars`, "agent");
-      } else if (secondaryWordCount < 325 || secondaryWordCount > 400) {
-        log(`[Writer] Secondary story out of range (325-400). Rewriting to 350 words...`, "agent");
-        const rewritten = await this.rewriteToWordCount(sections.secondaryStory.content, 350);
+      } else if (secondaryWordCount < MIN_WORDS || secondaryWordCount > MAX_WORDS) {
+        log(`[Writer] Secondary story out of range (${MIN_WORDS}-${MAX_WORDS}). Rewriting to 375 words...`, "agent");
+        const rewritten = await this.rewriteToWordCount(sections.secondaryStory.content, 375);
         updatedDraft = updatedDraft.replace(sections.secondaryStory.content, rewritten);
         needsRewrite = true;
       }
