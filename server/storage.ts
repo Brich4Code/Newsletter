@@ -82,12 +82,20 @@ export class DatabaseStorage implements IStorage {
   async getChallenges(): Promise<Challenge[]> {
     // Only return challenges that are NOT assigned to any issue
     // This ensures the shuffle feature shows only available (unused) challenges
+    // Limit to 5 to match the number of challenges generated each time
     const result = await db.execute(sql`
-      SELECT c.* FROM challenges c
+      SELECT
+        c.id,
+        c.title,
+        c.description,
+        c.type,
+        c.created_at as "createdAt"
+      FROM challenges c
       WHERE NOT EXISTS (
         SELECT 1 FROM issues WHERE issues.challenge_id = c.id
       )
       ORDER BY c.created_at DESC
+      LIMIT 5
     `);
     return result.rows as Challenge[];
   }
