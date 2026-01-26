@@ -400,10 +400,10 @@ export default function EditorialDesk() {
   };
 
   return (
-    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden font-sans selection:bg-primary/20">
+    <div className="h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-950 dark:to-indigo-950 text-foreground flex flex-col overflow-hidden font-sans selection:bg-primary/20">
 
       {/* Header */}
-      <header className="h-14 md:h-16 border-b border-border/40 bg-background/50 backdrop-blur sticky top-0 z-50 px-4 md:px-6 flex items-center justify-between shrink-0">
+      <header className="h-14 md:h-16 border-b border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-xl sticky top-0 z-50 px-4 md:px-6 flex items-center justify-between shrink-0 shadow-lg shadow-black/5">
         <div className="flex items-center gap-3">
           {/* Mobile menu button */}
           <Button
@@ -506,10 +506,10 @@ export default function EditorialDesk() {
 
         {/* Column 1: The Wire (Source Material) */}
         <aside className={cn(
-          "fixed lg:relative inset-y-0 left-0 z-40 w-[85vw] sm:w-[400px] border-r border-border/40 bg-background lg:bg-muted/10 flex flex-col shrink-0 transition-transform duration-300 lg:transition-none",
+          "fixed lg:relative inset-y-0 left-0 z-40 w-[85vw] sm:w-[400px] border-r border-white/20 dark:border-white/10 bg-white/30 dark:bg-black/20 backdrop-blur-xl flex flex-col shrink-0 transition-transform duration-300 lg:transition-none shadow-2xl",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}>
-          <div className="p-3 md:p-4 border-b border-border/40 bg-background/50 backdrop-blur z-10 sticky top-0">
+          <div className="p-3 md:p-4 border-b border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-xl z-10 sticky top-0">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-muted-foreground" />
@@ -713,8 +713,8 @@ export default function EditorialDesk() {
                   <div
                     key={lead.id}
                     className={cn(
-                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-card hover:shadow-md",
-                      isSelected(lead.id) ? "border-primary/50 bg-primary/5" : "border-border/50 hover:border-primary/20"
+                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-white/60 dark:bg-black/30 backdrop-blur-lg hover:shadow-xl hover:shadow-primary/10",
+                      isSelected(lead.id) ? "border-primary/50 bg-primary/20 dark:bg-primary/10 shadow-lg shadow-primary/20" : "border-white/30 dark:border-white/10 hover:border-primary/30"
                     )}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -812,8 +812,8 @@ export default function EditorialDesk() {
               </div>
 
               <div className={cn(
-                "rounded-2xl border-2 border-dashed p-4 md:p-8 transition-all min-h-[150px] md:min-h-[200px] flex flex-col justify-center items-center text-center relative overflow-hidden",
-                selectedMain ? "border-primary/20 bg-card" : "border-border/30 bg-muted/5 hover:bg-muted/10 hover:border-primary/30"
+                "rounded-2xl border-2 border-dashed p-4 md:p-8 transition-all min-h-[150px] md:min-h-[200px] flex flex-col justify-center items-center text-center relative overflow-hidden backdrop-blur-lg",
+                selectedMain ? "border-primary/30 bg-white/60 dark:bg-black/30 shadow-xl shadow-primary/10" : "border-white/30 dark:border-white/10 bg-white/30 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/25 hover:border-primary/40"
               )}>
                 {selectedMain ? (
                   <div className="w-full text-left space-y-3 md:space-y-4 relative z-10">
@@ -844,7 +844,7 @@ export default function EditorialDesk() {
 
               {/* Note for Main Story */}
               {selectedMain && (
-                <div className="space-y-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-lg p-3 md:p-4">
+                <div className="space-y-2 bg-amber-100/60 dark:bg-amber-950/30 border border-amber-300/40 dark:border-amber-700/30 rounded-lg p-3 md:p-4 backdrop-blur-lg shadow-lg">
                   <Label className="text-sm font-medium flex items-center gap-2 text-amber-700 dark:text-amber-400">
                     <PenLine className="w-4 h-4" />
                     Editorial Note for LLM
@@ -889,8 +889,8 @@ export default function EditorialDesk() {
                 </div>
 
                 <div className={cn(
-                  "rounded-xl border-2 border-dashed p-4 md:p-6 transition-all min-h-[120px] md:min-h-[150px] flex flex-col justify-center items-center text-center relative",
-                  selectedSecondary ? "border-primary/20 bg-card" : "border-border/30 bg-muted/5 hover:bg-muted/10 hover:border-primary/30"
+                  "rounded-xl border-2 border-dashed p-4 md:p-6 transition-all min-h-[120px] md:min-h-[150px] flex flex-col justify-center items-center text-center relative backdrop-blur-lg",
+                  selectedSecondary ? "border-primary/30 bg-white/60 dark:bg-black/30 shadow-xl shadow-primary/10" : "border-white/30 dark:border-white/10 bg-white/30 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/25 hover:border-primary/40"
                 )}>
                   {selectedSecondary ? (
                     <div className="w-full text-left space-y-2 relative z-10">
@@ -907,7 +907,7 @@ export default function EditorialDesk() {
 
                 {/* Note for Secondary Story */}
                 {selectedSecondary && (
-                  <div className="space-y-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-lg p-3">
+                  <div className="space-y-2 bg-amber-100/60 dark:bg-amber-950/30 border border-amber-300/40 dark:border-amber-700/30 rounded-lg p-3 backdrop-blur-lg shadow-lg">
                     <Label className="text-xs font-medium flex items-center gap-2 text-amber-700 dark:text-amber-400">
                       <PenLine className="w-3 h-3" />
                       Editorial Note
@@ -969,12 +969,12 @@ export default function EditorialDesk() {
                 </div>
 
                 {challengesLoading || generateChallengesMutation.isPending ? (
-                  <div className="rounded-xl border border-border/50 bg-card p-4 text-center min-h-[150px] md:min-h-[200px] flex flex-col items-center justify-center">
+                  <div className="rounded-xl border border-white/30 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-lg p-4 text-center min-h-[150px] md:min-h-[200px] flex flex-col items-center justify-center shadow-lg">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
                     <p className="text-xs text-muted-foreground mt-2">Generating...</p>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-border/50 bg-card p-3 md:p-4 space-y-2 md:space-y-3 min-h-[150px] md:min-h-[200px]">
+                  <div className="rounded-xl border border-white/30 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-lg p-3 md:p-4 space-y-2 md:space-y-3 min-h-[150px] md:min-h-[200px] shadow-lg">
                     {challenges.length === 0 ? (
                       <div className="text-center py-4 text-muted-foreground text-sm flex flex-col items-center justify-center h-full">
                         <Trophy className="w-8 h-8 text-muted-foreground/30 mb-2" />
@@ -987,10 +987,10 @@ export default function EditorialDesk() {
                           key={challenge.id}
                           onClick={() => setSelectedChallenge(challenge)}
                           className={cn(
-                            "p-2 md:p-3 rounded-lg cursor-pointer border transition-all hover:shadow-sm",
+                            "p-2 md:p-3 rounded-lg cursor-pointer border transition-all backdrop-blur-md",
                             selectedChallenge?.id === challenge.id
-                              ? "bg-primary/10 border-primary shadow-sm"
-                              : "bg-background border-border/50 hover:border-primary/30"
+                              ? "bg-primary/20 dark:bg-primary/10 border-primary shadow-lg shadow-primary/20"
+                              : "bg-white/50 dark:bg-black/30 border-white/40 dark:border-white/10 hover:border-primary/40 hover:shadow-md"
                           )}
                         >
                           <div className="flex justify-between items-start">
@@ -1061,12 +1061,12 @@ export default function EditorialDesk() {
               </label>
               <div className="grid grid-cols-1 gap-2">
                 {selectedLinks.length === 0 && (
-                  <div className="text-center p-6 md:p-8 border border-dashed border-border/40 rounded-xl text-muted-foreground/50 text-sm">
+                  <div className="text-center p-6 md:p-8 border border-dashed border-white/30 dark:border-white/10 rounded-xl text-muted-foreground/50 text-sm bg-white/30 dark:bg-black/20 backdrop-blur-lg">
                     Select "Link" on items from the wire to add them here.
                   </div>
                 )}
                 {selectedLinks.map(link => (
-                  <div key={link.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg border border-border/40 bg-card/50">
+                  <div key={link.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg border border-white/30 dark:border-white/10 bg-white/50 dark:bg-black/30 backdrop-blur-md shadow-md">
                     <div className="flex items-center gap-2 md:gap-3 overflow-hidden flex-1 min-w-0">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                       <span className="font-medium text-xs md:text-sm truncate">{link.title}</span>
