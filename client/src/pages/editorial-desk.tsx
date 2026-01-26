@@ -51,11 +51,7 @@ export default function EditorialDesk() {
 
   // Custom challenge dialog state
   const [customChallengeOpen, setCustomChallengeOpen] = useState(false);
-  const [customChallenge, setCustomChallenge] = useState({
-    title: "",
-    description: "",
-    type: "creative",
-  });
+  const [customChallengePrompt, setCustomChallengePrompt] = useState("");
 
   // Fetch leads from API
   const { data: leads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
@@ -231,10 +227,10 @@ export default function EditorialDesk() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["challenges"] });
       setCustomChallengeOpen(false);
-      setCustomChallenge({ title: "", description: "", type: "creative" });
+      setCustomChallengePrompt("");
       toast({
         title: "Challenge Created",
-        description: "Your custom challenge has been added.",
+        description: "Your custom challenge has been generated and added.",
       });
     },
     onError: () => {
@@ -1012,44 +1008,24 @@ export default function EditorialDesk() {
                 <Dialog open={customChallengeOpen} onOpenChange={setCustomChallengeOpen}>
                   <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                      <DialogTitle>Create Custom Challenge</DialogTitle>
+                      <DialogTitle>Generate Custom Challenge</DialogTitle>
                       <DialogDescription>
-                        Create your own weekly challenge for the newsletter.
+                        Describe what you want the challenge to be about, and AI will generate a complete challenge.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="challenge-title">Title *</Label>
-                        <Input
-                          id="challenge-title"
-                          placeholder="e.g., Build a Personal Brand with AI"
-                          value={customChallenge.title}
-                          onChange={(e) => setCustomChallenge({ ...customChallenge, title: e.target.value })}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="challenge-type">Type *</Label>
-                        <select
-                          id="challenge-type"
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                          value={customChallenge.type}
-                          onChange={(e) => setCustomChallenge({ ...customChallenge, type: e.target.value })}
-                        >
-                          <option value="creative">Creative</option>
-                          <option value="productivity">Productivity</option>
-                          <option value="prompt_engineering">Prompt Engineering</option>
-                          <option value="no_code">No Code</option>
-                        </select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="challenge-description">Description *</Label>
+                        <Label htmlFor="challenge-prompt">Challenge Prompt *</Label>
                         <Textarea
-                          id="challenge-description"
-                          placeholder="Describe the challenge with 4-7 clear steps (120-150 words recommended)"
-                          value={customChallenge.description}
-                          onChange={(e) => setCustomChallenge({ ...customChallenge, description: e.target.value })}
-                          rows={6}
+                          id="challenge-prompt"
+                          placeholder="e.g., Create a challenge about using AI to plan healthy meals for a week"
+                          value={customChallengePrompt}
+                          onChange={(e) => setCustomChallengePrompt(e.target.value)}
+                          rows={4}
                         />
+                        <p className="text-xs text-muted-foreground">
+                          AI will generate a complete challenge with title, description, and steps using the latest AI tools.
+                        </p>
                       </div>
                     </div>
                     <DialogFooter>
@@ -1060,16 +1036,16 @@ export default function EditorialDesk() {
                         Cancel
                       </Button>
                       <Button
-                        onClick={() => createCustomChallengeMutation.mutate(customChallenge)}
-                        disabled={!customChallenge.title || !customChallenge.description || createCustomChallengeMutation.isPending}
+                        onClick={() => createCustomChallengeMutation.mutate(customChallengePrompt)}
+                        disabled={!customChallengePrompt.trim() || createCustomChallengeMutation.isPending}
                       >
                         {createCustomChallengeMutation.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            Creating...
+                            Generating...
                           </>
                         ) : (
-                          <>Create Challenge</>
+                          <>Generate Challenge</>
                         )}
                       </Button>
                     </DialogFooter>
