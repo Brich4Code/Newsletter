@@ -30,13 +30,13 @@ export async function generateChallenges(): Promise<{ message: string; challenge
   return response.json();
 }
 
-export async function createCustomChallenge(challenge: { title: string; description: string; type: string }): Promise<Challenge> {
+export async function createCustomChallenge(prompt: string): Promise<Challenge> {
   const response = await fetch(`${API_BASE}/challenges/custom`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(challenge),
+    body: JSON.stringify({ prompt }),
   });
 
   if (!response.ok) {

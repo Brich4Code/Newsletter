@@ -240,23 +240,71 @@ export async function registerRoutes(
     }
   });
 
-  // Create custom challenge
+  // Create custom challenge from prompt
   app.post("/api/challenges/custom", requireAuth, async (req, res) => {
     try {
-      console.log("[API] Creating custom challenge...");
-      const { title, description, type } = req.body;
+      console.log("[API] Creating custom challenge from prompt...");
+      const { prompt } = req.body;
 
-      if (!title || !description || !type) {
-        return res.status(400).json({ error: "Missing required fields: title, description, type" });
+      if (!prompt) {
+        return res.status(400).json({ error: "Missing required field: prompt" });
       }
 
+      // Import gemini and perplexity services
+      const { geminiService } = await import("./services/gemini");
+      const { perplexityService } = await import("./services/perplexity");
+
+      // First, fetch the latest AI models using Perplexity web search
+      console.log("[API] Fetching latest AI models for context...");
+      const modelsResearch = await perplexityService.research(
+        `What are the latest AI models and tools available as of ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}? ` +
+        `List the current versions for: OpenAI GPT/ChatGPT, Anthropic Claude, Google Gemini, Midjourney, DALL-E, Suno, RunwayML, and any other popular AI tools. ` +
+        `Only include models that are currently publicly available.`
+      );
+
+      // Generate challenge using Gemini with user's prompt
+      const generationPrompt = `Generate a creative, practical, and non-technical AI challenge based on this user request:
+
+USER REQUEST: ${prompt}
+
+LATEST AI MODELS (use these):
+${modelsResearch.answer}
+
+REQUIREMENTS:
+- Accessible to non-experts (no coding required unless it's low-code/no-code like Zapier/Make)
+- Solvable in 20-60 minutes
+- Use ONLY the LATEST AI tools mentioned above
+- Focus on "doing something cool" or "saving time" with cutting-edge AI
+- FUN and engaging
+- Should require 4-7 clear steps to complete
+
+Create ONE challenge with:
+- Catchy title (under 60 chars)
+- Description (120-150 words) with 4-7 clear, simple steps
+- Type: "creative", "productivity", "prompt_engineering", or "no_code"
+- Use the specific model names from the LATEST AI MODELS section above
+
+Return as JSON object:
+{
+  "title": "Challenge title",
+  "description": "Full description with clear steps",
+  "type": "challenge_type"
+}`;
+
+      const generated = await geminiService.generateJSON<{
+        title: string;
+        description: string;
+        type: string;
+      }>(generationPrompt);
+
+      // Save to database
       const challenge = await storage.createChallenge({
-        title,
-        description,
-        type,
+        title: generated.title,
+        description: generated.description,
+        type: generated.type,
       });
 
-      console.log(`[API] Custom challenge created: ${title}`);
+      console.log(`[API] Custom challenge created: ${generated.title}`);
       res.status(200).json(challenge);
     } catch (error) {
       console.error("[API] Failed to create custom challenge:", error);
