@@ -19,7 +19,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2, Shuffle, Plus, StickyNote, Menu, X, PenLine, LogOut, Calendar } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ArrowRight, Check, ExternalLink, FileText, Layout, RefreshCw, Trash2, Trophy, Newspaper, Database, Loader2, Shuffle, Plus, StickyNote, Menu, X, PenLine, LogOut, Calendar, Search, ChevronDown, Zap, TrendingUp } from "lucide-react";
 import logoImage from "@assets/generated_images/happy_colorful_playful_geometric_logo_for_hello_jumble.png";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/App";
@@ -52,6 +59,10 @@ export default function EditorialDesk() {
   // Custom challenge dialog state
   const [customChallengeOpen, setCustomChallengeOpen] = useState(false);
   const [customChallengePrompt, setCustomChallengePrompt] = useState("");
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
 
   // Fetch leads from API
   const { data: leads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
@@ -421,6 +432,29 @@ export default function EditorialDesk() {
     }
   };
 
+  // Filter leads based on search and source filter
+  const filteredLeads = leads.filter(lead => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        lead.title.toLowerCase().includes(query) ||
+        lead.summary.toLowerCase().includes(query) ||
+        lead.source.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
+
+    // Source filter
+    if (sourceFilter && lead.source !== sourceFilter) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Get unique sources for filter dropdown
+  const uniqueSources = Array.from(new Set(leads.map(lead => lead.source))).sort();
+
   return (
     <div className="h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-950 dark:to-indigo-950 text-foreground flex flex-col overflow-hidden font-sans selection:bg-primary/20">
 
@@ -536,7 +570,7 @@ export default function EditorialDesk() {
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-muted-foreground" />
                 Incoming Wire
-                <Badge variant="secondary" className="ml-1 text-[10px] h-5">{leads.length}</Badge>
+                <Badge variant="secondary" className="ml-1 text-[10px] h-5">{filteredLeads.length}/{leads.length}</Badge>
               </h2>
               <Button
                 variant="ghost"
@@ -551,6 +585,58 @@ export default function EditorialDesk() {
                 )}
               </Button>
             </div>
+
+            {/* Search Bar */}
+            <div className="mb-3 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search stories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 text-sm bg-white/60 dark:bg-black/30"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+
+            {/* Source Filter */}
+            {uniqueSources.length > 1 && (
+              <div className="mb-3">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full justify-between text-xs">
+                      <span>{sourceFilter || "All Sources"}</span>
+                      <ChevronDown className="w-3 h-3 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[340px] max-h-[300px] overflow-y-auto">
+                    <DropdownMenuItem onClick={() => setSourceFilter(null)}>
+                      All Sources ({leads.length})
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {uniqueSources.map(source => (
+                      <DropdownMenuItem
+                        key={source}
+                        onClick={() => setSourceFilter(source)}
+                        className={sourceFilter === source ? "bg-primary/10" : ""}
+                      >
+                        {source} ({leads.filter(l => l.source === source).length})
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+
             <div className="flex gap-2 flex-wrap">
               {/* Add Story Dialog */}
               <Dialog open={addStoryOpen} onOpenChange={setAddStoryOpen}>
@@ -645,79 +731,60 @@ export default function EditorialDesk() {
                 </DialogContent>
               </Dialog>
 
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => researchMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
-                className="bg-primary text-primary-foreground flex-1 sm:flex-none"
-              >
-                {researchMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-1 w-3 h-3 animate-spin" />
-                    Finding...
-                  </>
-                ) : (
-                  "Find Stories"
-                )}
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => breakingMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
-                className="flex-1 sm:flex-none bg-rose-600 text-white hover:bg-rose-700 hover:text-white border-rose-500"
-              >
-                {breakingMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-1 w-3 h-3 animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  "Breaking (48h)"
-                )}
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => deepDiveMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
-                className="flex-1 sm:flex-none bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white border-indigo-500"
-              >
-                {deepDiveMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-1 w-3 h-3 animate-spin" />
-                    Scouting...
-                  </>
-                ) : (
-                  <>
-                    <Trophy className="mr-1 w-3 h-3" />
-                    Trend Scout
-                  </>
-                )}
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => monthlyMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
-                className="flex-1 sm:flex-none bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white border-emerald-500"
-              >
-                {monthlyMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-1 w-3 h-3 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Calendar className="mr-1 w-3 h-3" />
-                    Last 30 Days
-                  </>
-                )}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
+                    className="bg-primary text-primary-foreground flex-1"
+                  >
+                    {(researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending) ? (
+                      <>
+                        <Loader2 className="mr-1 w-3 h-3 animate-spin" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Newspaper className="mr-1 w-3 h-3" />
+                        Find Stories
+                        <ChevronDown className="ml-1 w-3 h-3" />
+                      </>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[200px]">
+                  <DropdownMenuItem onClick={() => researchMutation.mutate()}>
+                    <Newspaper className="mr-2 w-4 h-4" />
+                    <div>
+                      <div className="font-medium">Standard (7d)</div>
+                      <div className="text-[10px] text-muted-foreground">Last week's stories</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => breakingMutation.mutate()}>
+                    <Zap className="mr-2 w-4 h-4 text-rose-600" />
+                    <div>
+                      <div className="font-medium">Breaking (48h)</div>
+                      <div className="text-[10px] text-muted-foreground">Ultra-recent trending</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => deepDiveMutation.mutate()}>
+                    <Trophy className="mr-2 w-4 h-4 text-indigo-600" />
+                    <div>
+                      <div className="font-medium">Trend Scout</div>
+                      <div className="text-[10px] text-muted-foreground">AI-powered insights</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => monthlyMutation.mutate()}>
+                    <Calendar className="mr-2 w-4 h-4 text-emerald-600" />
+                    <div>
+                      <div className="font-medium">Last 30 Days</div>
+                      <div className="text-[10px] text-muted-foreground">Comprehensive search</div>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
                 size="sm"
@@ -746,18 +813,35 @@ export default function EditorialDesk() {
                 <p className="font-medium">No stories yet</p>
                 <p className="text-sm mt-1">Click "Find Stories" or add one manually</p>
               </div>
+            ) : filteredLeads.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No matching stories</p>
+                <p className="text-sm mt-1">Try adjusting your search or filter</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSourceFilter(null);
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
             ) : (
               <div className="p-3 md:p-4 space-y-3">
-                {leads.map(lead => (
+                {filteredLeads.map(lead => (
                   <div
                     key={lead.id}
                     className={cn(
-                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-white/60 dark:bg-black/30 backdrop-blur-lg hover:shadow-xl hover:shadow-primary/10 overflow-hidden",
+                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-white/60 dark:bg-black/30 backdrop-blur-lg hover:shadow-xl hover:shadow-primary/10",
                       isSelected(lead.id) ? "border-primary/50 bg-primary/20 dark:bg-primary/10 shadow-lg shadow-primary/20" : "border-white/30 dark:border-white/10 hover:border-primary/30"
                     )}
                   >
                     <div className="flex justify-between items-start mb-2 gap-2">
-                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                         <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded whitespace-nowrap">
                           {lead.source}
                         </span>
@@ -768,18 +852,18 @@ export default function EditorialDesk() {
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{lead.relevanceScore}%</span>
                     </div>
 
-                    <h3 className="font-display font-medium text-sm leading-snug mb-2 text-foreground/90 break-words">
+                    <h3 className="font-display font-medium text-sm leading-snug mb-2 text-foreground/90 break-words overflow-wrap-anywhere w-full">
                       {lead.title}
                     </h3>
 
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2 break-words">
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2 break-words overflow-wrap-anywhere w-full">
                       {lead.summary}
                     </p>
 
                     {lead.note && (
-                      <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded mb-2 flex items-start gap-1">
+                      <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded mb-2 flex items-start gap-1 w-full">
                         <StickyNote className="w-3 h-3 mt-0.5 shrink-0" />
-                        <span className="line-clamp-1 break-words min-w-0">{lead.note}</span>
+                        <span className="line-clamp-1 break-words overflow-wrap-anywhere flex-1 min-w-0">{lead.note}</span>
                       </div>
                     )}
 

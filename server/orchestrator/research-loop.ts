@@ -42,7 +42,7 @@ export class ResearchOrchestrator {
   /**
    * Run a single research cycle
    */
-  async runCycle(mode: "standard" | "deep-dive" | "monthly" = "standard"): Promise<void> {
+  async runCycle(mode: "standard" | "deep-dive" | "monthly" | "breaking" = "standard"): Promise<void> {
     if (this.isRunning) {
       log("[Orchestrator] Research cycle already running, skipping", "orchestrator");
       return;
@@ -90,7 +90,7 @@ export class ResearchOrchestrator {
   /**
    * Manually trigger a research cycle (for testing/admin)
    */
-  async triggerManualCycle(mode: "standard" | "deep-dive" | "monthly" = "standard"): Promise<void> {
+  async triggerManualCycle(mode: "standard" | "deep-dive" | "monthly" | "breaking" = "standard"): Promise<void> {
     log(`[Orchestrator] Manual research cycle triggered (${mode})`, "orchestrator");
     await this.runCycle(mode);
   }
