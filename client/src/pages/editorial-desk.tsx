@@ -831,18 +831,18 @@ export default function EditorialDesk() {
                 </Button>
               </div>
             ) : (
-              <div className="p-3 md:p-4 space-y-3">
+              <div className="p-3 md:p-4 space-y-3 min-w-0">
                 {filteredLeads.map(lead => (
                   <div
                     key={lead.id}
                     className={cn(
-                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-white/60 dark:bg-black/30 backdrop-blur-lg hover:shadow-xl hover:shadow-primary/10",
+                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-white/60 dark:bg-black/30 backdrop-blur-lg hover:shadow-xl hover:shadow-primary/10 overflow-hidden min-w-0",
                       isSelected(lead.id) ? "border-primary/50 bg-primary/20 dark:bg-primary/10 shadow-lg shadow-primary/20" : "border-white/30 dark:border-white/10 hover:border-primary/30"
                     )}
                   >
                     <div className="flex justify-between items-start mb-2 gap-2">
                       <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded whitespace-nowrap">
+                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded truncate max-w-[200px]" title={lead.source}>
                           {lead.source}
                         </span>
                         {lead.isManual && (
