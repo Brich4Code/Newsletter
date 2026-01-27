@@ -1,6 +1,7 @@
 import { geminiService } from "../services/gemini";
 import { perplexityService } from "../services/perplexity";
 import { vectorSearchService } from "../services/vector-search";
+import { hackerNewsService } from "../services/hackernews";
 import { storage } from "../storage";
 import { log } from "../index";
 
@@ -48,13 +49,16 @@ export class ScoopHunterAgent {
     return this.ROUNDUP_PATTERNS.some(pattern => pattern.test(title));
   }
 
-  async run(mode: "standard" | "deep-dive" | "monthly" = "standard"): Promise<void> {
+  async run(mode: "standard" | "deep-dive" | "monthly" | "breaking" = "standard"): Promise<void> {
     log(`[ScoopHunter] Starting research cycle in ${mode} mode...`, "agent");
 
     try {
       // Calculate date filter based on mode
       const today = new Date();
-      const daysBack = mode === "monthly" ? 30 : 7;
+      let daysBack = 7;
+      if (mode === "monthly") daysBack = 30;
+      else if (mode === "breaking") daysBack = 2;
+
       const startDate = new Date(today);
       startDate.setDate(today.getDate() - daysBack);
       const dateFilter = `after:${startDate.toISOString().split('T')[0]}`;
@@ -62,7 +66,7 @@ export class ScoopHunterAgent {
       let searchQueries: string[] = [];
 
       if (mode === "standard") {
-        // Standard Mode: Use predefined topics with strict date filtering
+        // Standard Mode: Use predefined topics with strict date filtering (7 days)
         const baseTopics = [
           // Major company news
           `OpenAI news`,
@@ -81,9 +85,43 @@ export class ScoopHunterAgent {
           `AI regulation OR government policy`,
           // Hardware and devices
           `AI device OR AI hardware announcement`,
+          // Open Source & Developer Tools (NEW)
+          `AI GitHub trending OR viral AI project`,
+          `AI open source release OR announcement`,
+          `AI developer tool launch`,
+          // International/Emerging Players (moved from monthly)
+          `Alibaba AI OR Qwen OR DeepSeek news`,
+          `AI China OR European AI news`,
+          // Community Viral Signals (NEW)
+          `AI viral Twitter OR Reddit discussion`,
+          `AI Hacker News top story`,
+          // Model Releases - Broader (NEW)
+          `new AI model released OR announced`,
+          `LLM launch OR language model release`,
         ];
 
         searchQueries = baseTopics.map(topic => `${topic} ${dateFilter}`);
+      } else if (mode === "breaking") {
+        // Breaking Mode: Last 48 hours with aggressive recency terms
+        const breakingTopics = [
+          // Use more urgent/recent language
+          `OpenAI announcement OR release today`,
+          `Anthropic Claude latest OR breaking`,
+          `Google Gemini just released OR announced`,
+          `Meta AI breaking news OR just announced`,
+          `ChatGPT new feature OR update announced`,
+          `AI breakthrough OR major discovery`,
+          `AI viral OR trending now`,
+          `GitHub trending AI project`,
+          `Hacker News AI discussion`,
+          `new AI model just released`,
+          `Sam Altman OR Elon Musk latest`,
+          `AI controversy OR drama breaking`,
+          `Qwen OR DeepSeek latest news`,
+          `AI company acquisition OR funding`,
+        ];
+
+        searchQueries = breakingTopics.map(topic => `${topic} ${dateFilter}`);
       } else if (mode === "monthly") {
         // Monthly Mode: Comprehensive search with expanded topics (last 30 days)
         const monthlyTopics = [
@@ -172,12 +210,50 @@ export class ScoopHunterAgent {
         }
       }
 
+      // Fetch from Hacker News for additional coverage (all modes)
+      log("[ScoopHunter] Fetching trending AI stories from Hacker News...", "agent");
+      try {
+        const hoursBack = mode === "breaking" ? 48 : mode === "monthly" ? 168 : 48; // 48h for breaking/standard, 7 days for monthly
+        const minScore = mode === "monthly" ? 75 : 100; // Lower threshold for monthly
+        const hnStories = await hackerNewsService.getRecentAIStories(hoursBack, minScore);
+
+        log(`[ScoopHunter] Found ${hnStories.length} HN stories`, "agent");
+
+        for (const story of hnStories) {
+          // Check for duplicates
+          const duplicateCheck = await vectorSearchService.checkDuplicate(
+            story.url!,
+            story.title
+          );
+
+          if (duplicateCheck.isDuplicate) {
+            continue;
+          }
+
+          // Skip roundups by title
+          if (this.isRoundupByTitle(story.title)) {
+            continue;
+          }
+
+          const source = this.extractSource(story.url!);
+
+          allCandidates.push({
+            title: story.title,
+            url: this.cleanUrl(story.url!),
+            snippet: `${story.score} points on Hacker News with ${story.descendants || 0} comments`,
+            source: `${source} (HN)`,
+          });
+        }
+      } catch (error) {
+        log(`[ScoopHunter] HN fetch failed: ${error}`, "agent");
+      }
+
       if (allCandidates.length === 0) {
         log("[ScoopHunter] No new candidates found", "agent");
         return;
       }
 
-      log(`[ScoopHunter] Found ${allCandidates.length} unique candidates`, "agent");
+      log(`[ScoopHunter] Found ${allCandidates.length} unique candidates (including HN)`, "agent");
 
       // 3. Score relevance and generate summaries
       const scoredCandidates = await this.scoreAndSummarize(allCandidates);

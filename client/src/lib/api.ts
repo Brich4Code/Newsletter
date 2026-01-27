@@ -108,6 +108,21 @@ export async function startMonthlyResearch(): Promise<{ status: string; message:
   return response.json();
 }
 
+export async function startBreakingResearch(): Promise<{ status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/research/breaking`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to start breaking news research");
+  }
+
+  return response.json();
+}
+
 export async function deleteLead(id: string): Promise<{ success: boolean }> {
   const response = await fetch(`${API_BASE}/leads/${id}`, {
     method: "DELETE",

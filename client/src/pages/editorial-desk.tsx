@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, generateChallenges, createCustomChallenge, publishIssue, startResearch, startDeepDiveResearch, startMonthlyResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
+import { fetchLeads, fetchChallenges, generateChallenges, createCustomChallenge, publishIssue, startResearch, startDeepDiveResearch, startMonthlyResearch, startBreakingResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -126,6 +126,28 @@ export default function EditorialDesk() {
       toast({
         title: "Monthly Search Failed",
         description: "There was an error starting the monthly search. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Breaking News mutation (48 hours)
+  const breakingMutation = useMutation({
+    mutationFn: startBreakingResearch,
+    onSuccess: () => {
+      toast({
+        title: "Breaking News Scan Started!",
+        description: "Scanning last 48 hours for trending stories. Refresh in 2-3 minutes.",
+      });
+      // Refetch leads after a delay
+      setTimeout(() => {
+        refetchLeads();
+      }, 120000); // 2 minutes
+    },
+    onError: () => {
+      toast({
+        title: "Breaking News Scan Failed",
+        description: "There was an error starting the scan. Please try again.",
         variant: "destructive",
       });
     },
@@ -627,7 +649,7 @@ export default function EditorialDesk() {
                 variant="default"
                 size="sm"
                 onClick={() => researchMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
                 className="bg-primary text-primary-foreground flex-1 sm:flex-none"
               >
                 {researchMutation.isPending ? (
@@ -643,8 +665,25 @@ export default function EditorialDesk() {
               <Button
                 variant="secondary"
                 size="sm"
+                onClick={() => breakingMutation.mutate()}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
+                className="flex-1 sm:flex-none bg-rose-600 text-white hover:bg-rose-700 hover:text-white border-rose-500"
+              >
+                {breakingMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-1 w-3 h-3 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  "Breaking (48h)"
+                )}
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => deepDiveMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
                 className="flex-1 sm:flex-none bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white border-indigo-500"
               >
                 {deepDiveMutation.isPending ? (
@@ -664,7 +703,7 @@ export default function EditorialDesk() {
                 variant="secondary"
                 size="sm"
                 onClick={() => monthlyMutation.mutate()}
-                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending}
+                disabled={researchMutation.isPending || deepDiveMutation.isPending || monthlyMutation.isPending || breakingMutation.isPending}
                 className="flex-1 sm:flex-none bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white border-emerald-500"
               >
                 {monthlyMutation.isPending ? (
@@ -713,34 +752,34 @@ export default function EditorialDesk() {
                   <div
                     key={lead.id}
                     className={cn(
-                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-white/60 dark:bg-black/30 backdrop-blur-lg hover:shadow-xl hover:shadow-primary/10",
+                      "group relative p-3 md:p-4 rounded-xl border transition-all duration-200 bg-white/60 dark:bg-black/30 backdrop-blur-lg hover:shadow-xl hover:shadow-primary/10 overflow-hidden",
                       isSelected(lead.id) ? "border-primary/50 bg-primary/20 dark:bg-primary/10 shadow-lg shadow-primary/20" : "border-white/30 dark:border-white/10 hover:border-primary/30"
                     )}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                    <div className="flex justify-between items-start mb-2 gap-2">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded whitespace-nowrap">
                           {lead.source}
                         </span>
                         {lead.isManual && (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1">Manual</Badge>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 whitespace-nowrap">Manual</Badge>
                         )}
                       </div>
-                      <span className="text-[10px] text-muted-foreground">{lead.relevanceScore}%</span>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{lead.relevanceScore}%</span>
                     </div>
 
-                    <h3 className="font-display font-medium text-sm leading-snug mb-2 text-foreground/90">
+                    <h3 className="font-display font-medium text-sm leading-snug mb-2 text-foreground/90 break-words">
                       {lead.title}
                     </h3>
 
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2">
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-2 break-words">
                       {lead.summary}
                     </p>
 
                     {lead.note && (
                       <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded mb-2 flex items-start gap-1">
                         <StickyNote className="w-3 h-3 mt-0.5 shrink-0" />
-                        <span className="line-clamp-1">{lead.note}</span>
+                        <span className="line-clamp-1 break-words min-w-0">{lead.note}</span>
                       </div>
                     )}
 
@@ -748,7 +787,7 @@ export default function EditorialDesk() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
+                        className="h-7 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground whitespace-nowrap"
                         onClick={() => assignMain(lead)}
                         disabled={selectedMain?.id === lead.id}
                       >
@@ -757,7 +796,7 @@ export default function EditorialDesk() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
+                        className="h-7 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground whitespace-nowrap"
                         onClick={() => assignSecondary(lead)}
                         disabled={selectedSecondary?.id === lead.id}
                       >
@@ -766,7 +805,7 @@ export default function EditorialDesk() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground"
+                        className="h-7 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground whitespace-nowrap"
                         onClick={() => toggleLink(lead)}
                       >
                         {selectedLinks.find(l => l.id === lead.id) ? "Remove" : "Link"}

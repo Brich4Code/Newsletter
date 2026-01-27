@@ -385,6 +385,26 @@ Return as JSON object:
     }
   });
 
+  // Breaking News Endpoint (last 48 hours with aggressive recency)
+  app.post("/api/research/breaking", requireAuth, async (req, res) => {
+    try {
+      // Trigger research in background
+      researchOrchestrator.runCycle("breaking").then(() => {
+        console.log("[API] Breaking news research cycle completed");
+      }).catch((error) => {
+        console.error("[API] Breaking news research cycle failed:", error);
+      });
+
+      res.status(200).json({
+        status: "started",
+        mode: "breaking",
+        message: "Breaking news search started. Scanning last 48 hours for trending AI stories...",
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to start breaking news research" });
+    }
+  });
+
   // Publish a new issue
   app.post("/api/issues/publish", requireAuth, async (req, res) => {
     try {
