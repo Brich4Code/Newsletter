@@ -181,6 +181,7 @@ export async function registerRoutes(
       await storage.deleteLead(id);
       res.status(200).json({ success: true, message: "Lead deleted" });
     } catch (error) {
+      console.error("[API] Delete lead error:", error);
       res.status(500).json({ error: "Failed to delete lead" });
     }
   });

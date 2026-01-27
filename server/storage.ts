@@ -68,6 +68,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteLead(id: string): Promise<void> {
+    // Clear FK references in issues table before deleting
+    await db.execute(sql`UPDATE issues SET main_story_id = NULL WHERE main_story_id = ${id}`);
+    await db.execute(sql`UPDATE issues SET secondary_story_id = NULL WHERE secondary_story_id = ${id}`);
+    await db.execute(sql`UPDATE issues SET quick_link_ids = array_remove(quick_link_ids, ${id}) WHERE ${id} = ANY(quick_link_ids)`);
     await db.delete(leads).where(eq(leads.id, id));
   }
 
