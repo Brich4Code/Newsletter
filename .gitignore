@@ -4,3 +4,8 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Replit state files
+.agent_state_main.bin
+.latest.json
+repl_state.bin
