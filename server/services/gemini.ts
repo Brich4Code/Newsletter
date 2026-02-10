@@ -283,7 +283,7 @@ Requirements:
   }
 
   /**
-   * Generate text embeddings using text-embedding-004
+   * Generate text embeddings using gemini-embedding-001
    * Returns 768-dimensional vector for semantic search
    */
   async embed(text: string): Promise<number[]> {
@@ -291,7 +291,7 @@ Requirements:
 
     try {
       const embeddingModel = this.genAI!.getGenerativeModel({
-        model: "text-embedding-004",
+        model: "gemini-embedding-001",
       });
 
       const result = await embeddingModel.embedContent({
@@ -299,7 +299,8 @@ Requirements:
           role: "user",
           parts: [{ text }],
         },
-      });
+        outputDimensionality: 768,
+      } as any);
 
       return result.embedding.values;
     } catch (error) {
