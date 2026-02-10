@@ -255,40 +255,42 @@ export async function registerRoutes(
       const { geminiService } = await import("./services/gemini");
       const { perplexityService } = await import("./services/perplexity");
 
-      // First, fetch the latest AI models using Perplexity web search
-      console.log("[API] Fetching latest AI models for context...");
-      const modelsResearch = await perplexityService.research(
-        `What are the latest AI models and tools available as of ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}? ` +
-        `List the current versions for: OpenAI GPT/ChatGPT, Anthropic Claude, Google Gemini, Midjourney, DALL-E, Suno, RunwayML, and any other popular AI tools. ` +
-        `Only include models that are currently publicly available.`
+      // Discover relevant AI tools for this challenge topic
+      console.log("[API] Discovering relevant AI tools...");
+      const toolsResearch = await perplexityService.research(
+        `What are the best AI tools and apps for this topic: "${prompt}"? ` +
+        `Include both well-known tools AND newer/trending ones. ` +
+        `Focus on tools that are free or have free tiers, and require NO coding. ` +
+        `Include the tool name and a brief note on what makes it good for this use case.`
       );
 
       // Generate challenge using Gemini with user's prompt
-      const generationPrompt = `Generate a creative, practical, and non-technical AI challenge based on this user request:
+      const generationPrompt = `Generate a fun, approachable AI challenge based on this user request:
 
 USER REQUEST: ${prompt}
 
-LATEST AI MODELS (use these):
-${modelsResearch.answer}
+RELEVANT AI TOOLS:
+${toolsResearch.answer}
+
+OUR READERS: Not coders. Curious people who want to try cool AI stuff that's fun, surprising, or genuinely useful. Think: teachers, parents, small business owners, creatives, students.
 
 REQUIREMENTS:
-- Accessible to non-experts (no coding required unless it's low-code/no-code like Zapier/Make)
-- Solvable in 20-60 minutes
-- Use ONLY the LATEST AI tools mentioned above
-- Focus on "doing something cool" or "saving time" with cutting-edge AI
-- FUN and engaging
-- Should require 4-7 clear steps to complete
+- Zero coding required
+- Completable in 15-45 minutes
+- Use 1-2 AI tools MAX
+- Friendly, conversational tone (like a friend explaining it)
+- Include 1-2 helpful links (to the tool or a quick tutorial)
+- 3-5 simple steps with emoji prefixes
 
 Create ONE challenge with:
 - Catchy title (under 60 chars)
-- Description (120-150 words) with 4-7 clear, simple steps
-- Type: "creative", "productivity", "prompt_engineering", or "no_code"
-- Use the specific model names from the LATEST AI MODELS section above
+- Description (120-150 words) with 3-5 clear steps
+- Type: "creative", "life_hack", "fun", or "self_improvement"
 
 Return as JSON object:
 {
   "title": "Challenge title",
-  "description": "Full description with clear steps",
+  "description": "Full description with steps and 1-2 links",
   "type": "challenge_type"
 }`;
 

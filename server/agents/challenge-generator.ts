@@ -5,62 +5,76 @@ import { perplexityService } from "../services/perplexity";
 
 /**
  * Challenge Generator Agent
- * Creates weekly AI coding challenges for the newsletter
- * Automatically fetches latest AI models to stay current
+ * Creates weekly AI challenges for non-technical readers
+ * Discovers trending and surprising AI tools, not just the usual suspects
  */
 export class ChallengeGeneratorAgent {
   async run(): Promise<void> {
     log("[ChallengeGenerator] Creating weekly challenges...", "agent");
 
     try {
-      // First, fetch the latest AI models using Perplexity web search
-      log("[ChallengeGenerator] Fetching latest AI models...", "agent");
-      const modelsResearch = await perplexityService.research(
-        `What are the latest AI models and tools available as of ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}? ` +
-        `List the current versions for: OpenAI GPT/ChatGPT, Anthropic Claude, Google Gemini, Midjourney, DALL-E, Suno, RunwayML, and any other popular AI tools. ` +
-        `Only include models that are currently publicly available.`
+      const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+      // Discover trending and lesser-known AI tools — not just the big names
+      log("[ChallengeGenerator] Discovering trending AI tools and apps...", "agent");
+      const toolsResearch = await perplexityService.research(
+        `What are the most interesting, fun, or surprisingly useful AI tools and apps people are talking about RIGHT NOW (${today})? ` +
+        `Go beyond the obvious (ChatGPT, Claude, Gemini). Include:\n` +
+        `- Trending new AI apps on Product Hunt, TikTok, or Twitter\n` +
+        `- Creative AI tools (music, art, video, fashion, design)\n` +
+        `- AI tools for everyday life (fitness, cooking, travel, dating, parenting, finance)\n` +
+        `- Weird, fun, or viral AI experiments people are sharing\n` +
+        `- AI tools that just launched or went viral this month\n` +
+        `Also include 2-3 of the big names (ChatGPT, Claude, Gemini, etc.) but ONLY if they have a specific new feature worth trying.\n` +
+        `For each tool, include its name and what makes it interesting right now.`
       );
 
-      log(`[ChallengeGenerator] Latest models researched: ${modelsResearch.answer.substring(0, 200)}...`, "agent");
+      log(`[ChallengeGenerator] Tools discovered: ${toolsResearch.answer.substring(0, 200)}...`, "agent");
 
-      const prompt = `Generate 5 creative, practical, and non-technical AI challenges for a weekly newsletter.
+      const prompt = `Generate 5 weekly challenges for Hello Jumble, an AI newsletter for curious non-technical people.
 
-LATEST AI MODELS (use these):
-${modelsResearch.answer}
+TRENDING AI TOOLS RIGHT NOW:
+${toolsResearch.answer}
 
-REQUIREMENTS:
-- Accessible to non-experts (no coding required unless it's low-code/no-code like Zapier/Make)
-- Solvable in 20-60 minutes
-- Use ONLY the LATEST AI tools mentioned above
-- Focus on "doing something cool" or "saving time" with cutting-edge AI
-- FUN and engaging (not just "summarize an email")
-- Should require 4-7 clear steps to complete
+OUR READERS: Not coders. They're curious people who want to try cool AI stuff that's fun, surprising, or genuinely improves their life. Think: teachers, marketers, parents, small business owners, creatives, students.
 
-Examples of good challenges:
-- "Create a family recipe book using the latest GPT and Midjourney models"
-- "Build a presentation with Gamma AI in under 10 minutes"
-- "Use NotebookLM to create a podcast from your meeting notes"
-- "Generate a personalized workout plan with latest Claude and track it in Notion"
-- "Create a music video using latest Suno and RunwayML versions"
+CHALLENGE RULES:
+- Zero coding. Ever. If a tool requires code, skip it.
+- Completable in 15-45 minutes
+- Each challenge should use 1-2 AI tools MAX (not a toolchain of 5 apps)
+- At least 2 of the 5 challenges should feature a tool most readers have probably NEVER heard of
+- At least 1 challenge should be weird/playful/unexpected (not just "be more productive")
+- Include 1-2 helpful links within the description (direct link to the tool, or a quick tutorial)
+- Steps should feel like a friend explaining it, not a technical manual
 
-Each challenge should have:
-- Catchy title (under 60 chars)
-- Description (120-150 words) with 4-7 clear, simple steps
-- Type: "creative", "productivity", "prompt_engineering", or "no_code"
-- Use the specific model names from the LATEST AI MODELS section above
+CHALLENGE TYPES (pick the best fit):
+- "creative" — make something cool (art, music, video, design, writing)
+- "life_hack" — save time or improve daily life (health, money, planning, learning)
+- "fun" — weird, playful, or just entertaining
+- "self_improvement" — learn something, grow a skill, reflect
+
+GREAT CHALLENGE EXAMPLES (this is the vibe):
+- "Turn Your Shower Thoughts Into a Podcast" — Use NotebookLM to turn random voice memos into a polished 5-min podcast episode
+- "AI Judge Your Spotify Wrapped" — Paste your top songs into ChatGPT and ask it to roast your music taste, then generate a playlist of what you SHOULD be listening to
+- "Build Your Dream Vacation in 10 Minutes" — Use Layla AI to plan a full itinerary, then have Midjourney visualize your trip
+- "Settle a Debate With AI" — Pick a silly argument you've had with a friend, present both sides to Claude, and see who AI thinks is right
+- "Create a Children's Book in 30 Minutes" — Write a short story with ChatGPT, illustrate it with Ideogram, compile in Canva
+
+BAD CHALLENGES (avoid these):
+- "Summarize a PDF with AI" (boring, obvious)
+- "Use ChatGPT to write an email" (everyone already does this)
+- "Build an AI-powered workflow with Zapier" (too technical)
+- "Compare outputs from 3 different LLMs" (too nerdy)
+- Anything that reads like a tutorial or homework assignment
 
 Return as JSON array:
 [
   {
-    "title": "Challenge title",
-    "description": "Full description with clear steps",
-    "type": "challenge_type"
+    "title": "Catchy challenge title (under 60 chars)",
+    "description": "120-150 words. Friendly tone. Include 3-5 simple steps with emoji prefixes. Include 1-2 links to the tools mentioned.",
+    "type": "creative | life_hack | fun | self_improvement"
   }
-]
-
-Generate 5 creative, practical, and non-technical AI challenges for a weekly newsletter.
-
-`;
+]`;
 
       const challenges = await geminiService.generateJSON<Array<{
         title: string;
@@ -81,7 +95,7 @@ Generate 5 creative, practical, and non-technical AI challenges for a weekly new
       log(`[ChallengeGenerator] Generated ${challenges.length} new challenges`, "agent");
     } catch (error) {
       log(`[ChallengeGenerator] Error: ${error}`, "agent");
-      throw error; // Re-throw to allow caller to handle failure
+      throw error;
     }
   }
 }

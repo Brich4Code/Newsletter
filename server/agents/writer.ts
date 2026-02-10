@@ -187,15 +187,13 @@ Total: 6 stories = 6 URLs`,
 
       researchPrompts.push({
         category: "Weekly Challenge",
-        prompt: `Find resources for this weekly challenge: "${challengeTitle}"${challengeDescription ? `\nDescription: ${challengeDescription}` : ''}
+        prompt: `Find 1-2 helpful links for this weekly challenge: "${challengeTitle}"${challengeDescription ? `\nDescription: ${challengeDescription}` : ''}
 
-Find:
-- Tutorial links (especially YouTube videos)
-- Step-by-step guides
-- Relevant tools or platforms
-- Example use cases
+Find ONLY:
+- A direct link to the main AI tool mentioned in the challenge
+- Optionally, one short tutorial or video showing how to use it
 
-Provide working URLs to reputable resources.`,
+Keep it minimal — just 1-2 links max. Our readers don't want a research paper, just a quick way to get started.`,
       });
     }
 
@@ -435,21 +433,21 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 8. **Weekly Scoop 📢** - Output as "## Weekly Scoop 📢" followed by 6 headlines
   - Each headline: emoji + [markdown link](url)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
-9. **Weekly Challenge** (200-350 words) - Output as "## Weekly Challenge" followed by:
-  - Brief intro explaining the challenge (1-2 sentences)
-  - Optional: YouTube video embed if relevant
-  - 4-7 numbered steps, each with a unique emoji prefix
-  - Use MODERN AI tools ONLY (2025-2026 tools like ChatGPT, Claude 3.5, Gemini 2.0, NotebookLM, Midjourney v6, Perplexity, Gamma, etc.)
-  - NO outdated tools or deprecated workflows
-  - Format each step as: "🎁 Step 1: [Title]" followed by 1-2 sentences of instructions
+9. **Weekly Challenge** (150-250 words) - Output as "## Weekly Challenge" followed by:
+  - Fun, casual intro (1-2 sentences) that makes readers WANT to try it
+  - 3-5 simple steps, each with a unique emoji prefix
+  - Tone: like a friend explaining something cool, NOT a technical manual
+  - Use only 1-2 AI tools per challenge (keep it simple)
+  - Include 1-2 links max (direct link to the tool, optionally a tutorial)
+  - Challenges should be fun, surprising, or genuinely useful for everyday life
+  - Our readers are NOT coders — they're curious people who love trying new things
+  - Format each step as: "🎁 Step 1: [Title]" followed by 1-2 sentences
   - Example format:
-    🎁 Step 1: Pick your constraints
-    Give ChatGPT your rules in one message...
+    🎨 Step 1: Grab your worst photo
+    Find that blurry vacation pic you almost deleted...
 
-    🍪 Step 2: Turn one idea into action
-    Have ChatGPT generate two options...
-
-  - CRITICAL: You MUST generate between 4-7 steps (not just 3-4)
+    ✨ Step 2: Let AI work its magic
+    Head to [tool name](link) and upload it...
 10. **Wrap Up** (Bold 1-2 lines inviting replies) - Output as "## Wrap Up" followed by content
 11. **Sources** - Output as "## Sources" with URLs grouped by category
 
@@ -495,13 +493,13 @@ Secondary story content...
 
 ## Weekly Challenge
 
-This week, try building your first AI workflow with no-code tools.
+Ever wondered what you'd look like as a Pixar character? This week, we're finding out.
 
-🎁 Step 1: Pick your task
-Choose one repetitive chore that takes 10 minutes of your day.
+🎨 Step 1: Find your best selfie
+Grab a photo where your face is clearly visible — silly faces welcome.
 
-🍪 Step 2: Set the trigger
-Use Zapier or Make to create a trigger for when new content arrives.
+✨ Step 2: Head to the AI
+Open [tool name](link) and upload your photo.
 
 🎶 Step 3: Connect the AI
 Add a step to send content to ChatGPT or Claude with a simple prompt.
@@ -591,7 +589,7 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
   - ✅ 🤖 [Headline text](https://url.com) = CORRECT
   - ❌ 🤖 Headline text = WRONG (missing URL)
-✓ Weekly Challenge (200-350 words with 4-7 emoji-prefixed steps like "🎁 Step 1: Title" using modern AI tools)
+✓ Weekly Challenge (150-250 words with 3-5 emoji-prefixed steps, 1-2 links max, fun and approachable tone)
 ✓ Wrap Up
 ✓ Sources section
 
