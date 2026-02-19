@@ -325,6 +325,11 @@ Return as JSON object:
     }
   });
 
+  // Get research status (also serves as HTTP heartbeat to prevent SIGTERM)
+  app.get("/api/research/status", requireAuth, (req, res) => {
+    res.json(researchOrchestrator.getStatus());
+  });
+
   // Trigger research cycle manually
   app.post("/api/research/start", requireAuth, async (req, res) => {
     try {

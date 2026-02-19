@@ -123,6 +123,27 @@ export async function startBreakingResearch(): Promise<{ status: string; message
   return response.json();
 }
 
+export interface ResearchStatus {
+  status: "idle" | "running" | "completed" | "failed";
+  mode: "standard" | "deep-dive" | "monthly" | "breaking" | null;
+  phase: string | null;
+  totalQueries: number;
+  completedQueries: number;
+  candidatesFound: number;
+  leadsStored: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+}
+
+export async function fetchResearchStatus(): Promise<ResearchStatus> {
+  const response = await fetch(`${API_BASE}/research/status`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch research status");
+  }
+  return response.json();
+}
+
 export async function deleteLead(id: string): Promise<{ success: boolean }> {
   const response = await fetch(`${API_BASE}/leads/${id}`, {
     method: "DELETE",

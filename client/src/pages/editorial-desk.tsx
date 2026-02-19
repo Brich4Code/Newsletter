@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchLeads, fetchChallenges, generateChallenges, createCustomChallenge, publishIssue, startResearch, startDeepDiveResearch, startMonthlyResearch, startBreakingResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote } from "@/lib/api";
+import { fetchLeads, fetchChallenges, generateChallenges, createCustomChallenge, publishIssue, startResearch, startDeepDiveResearch, startMonthlyResearch, startBreakingResearch, deleteLead, deleteAllLeads, createLead, updateLeadNote, fetchResearchStatus } from "@/lib/api";
+import type { ResearchStatus } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import type { Lead, Challenge } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,38 @@ export default function EditorialDesk() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
 
+  // Research polling state
+  const [isResearching, setIsResearching] = useState(false);
+
+  // Poll research status every 10s while researching (keeps HTTP traffic alive to prevent SIGTERM)
+  const { data: researchStatus } = useQuery<ResearchStatus>({
+    queryKey: ["researchStatus"],
+    queryFn: fetchResearchStatus,
+    refetchInterval: isResearching ? 10000 : false,
+    enabled: isResearching,
+  });
+
+  // Watch for research completion → auto refresh leads
+  useEffect(() => {
+    if (!researchStatus || !isResearching) return;
+
+    if (researchStatus.status === "completed") {
+      setIsResearching(false);
+      refetchLeads();
+      toast({
+        title: "Research Complete!",
+        description: `Found ${researchStatus.leadsStored} new leads in ${researchStatus.candidatesFound} candidates.`,
+      });
+    } else if (researchStatus.status === "failed") {
+      setIsResearching(false);
+      toast({
+        title: "Research Failed",
+        description: researchStatus.error || "An unknown error occurred.",
+        variant: "destructive",
+      });
+    }
+  }, [researchStatus?.status]);
+
   // Fetch leads from API
   const { data: leads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
     queryKey: ["leads"],
@@ -80,14 +113,11 @@ export default function EditorialDesk() {
   const researchMutation = useMutation({
     mutationFn: () => startResearch("standard"),
     onSuccess: () => {
+      setIsResearching(true);
       toast({
         title: "Standard Research Started!",
-        description: "Reviewing last 7 days of news. Refresh in 2-5 minutes.",
+        description: "Reviewing last 7 days of news. You'll see progress below.",
       });
-      // Refetch leads after a delay to show new results
-      setTimeout(() => {
-        refetchLeads();
-      }, 120000); // 2 minutes
     },
     onError: () => {
       toast({
@@ -102,14 +132,11 @@ export default function EditorialDesk() {
   const deepDiveMutation = useMutation({
     mutationFn: startDeepDiveResearch,
     onSuccess: () => {
+      setIsResearching(true);
       toast({
         title: "Trend Scout Started!",
-        description: "Identifying trends and finding stories. This takes 3-5 minutes.",
+        description: "Identifying trends and finding stories. You'll see progress below.",
       });
-      // Refetch leads after a delay
-      setTimeout(() => {
-        refetchLeads();
-      }, 150000); // 2.5 minutes
     },
     onError: () => {
       toast({
@@ -124,14 +151,11 @@ export default function EditorialDesk() {
   const monthlyMutation = useMutation({
     mutationFn: startMonthlyResearch,
     onSuccess: () => {
+      setIsResearching(true);
       toast({
         title: "Monthly Search Started!",
-        description: "Searching last 30 days across AI, science, and health. This may take 10+ minutes.",
+        description: "Searching last 30 days across AI, science, and health. You'll see progress below.",
       });
-      // Refetch leads after a longer delay due to larger scope
-      setTimeout(() => {
-        refetchLeads();
-      }, 300000); // 5 minutes
     },
     onError: () => {
       toast({
@@ -146,14 +170,11 @@ export default function EditorialDesk() {
   const breakingMutation = useMutation({
     mutationFn: startBreakingResearch,
     onSuccess: () => {
+      setIsResearching(true);
       toast({
         title: "Breaking News Scan Started!",
-        description: "Scanning last 48 hours for trending stories. Refresh in 2-3 minutes.",
+        description: "Scanning last 48 hours for trending stories. You'll see progress below.",
       });
-      // Refetch leads after a delay
-      setTimeout(() => {
-        refetchLeads();
-      }, 120000); // 2 minutes
     },
     onError: () => {
       toast({
@@ -565,6 +586,37 @@ export default function EditorialDesk() {
           "fixed lg:relative inset-y-0 left-0 z-40 w-[85vw] sm:w-[400px] border-r border-white/20 dark:border-white/10 bg-white/30 dark:bg-black/20 backdrop-blur-xl flex flex-col shrink-0 transition-transform duration-300 lg:transition-none shadow-2xl",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}>
+          {/* Research Progress Banner */}
+          {isResearching && researchStatus && researchStatus.status === "running" && (
+            <div className="px-3 md:px-4 py-2 border-b border-primary/20 bg-primary/10 backdrop-blur-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                <span className="text-xs font-medium text-primary capitalize">
+                  {researchStatus.phase || "Starting"}
+                  {researchStatus.mode ? ` (${researchStatus.mode})` : ""}
+                </span>
+              </div>
+              {researchStatus.totalQueries > 0 && (
+                <div className="w-full bg-primary/20 rounded-full h-1.5">
+                  <div
+                    className="bg-primary h-1.5 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.round((researchStatus.completedQueries / researchStatus.totalQueries) * 100)}%`,
+                    }}
+                  />
+                </div>
+              )}
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span>
+                  {researchStatus.completedQueries}/{researchStatus.totalQueries} queries
+                </span>
+                <span>
+                  {researchStatus.candidatesFound} candidates
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="p-3 md:p-4 border-b border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-xl z-10 sticky top-0">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-sm font-semibold flex items-center gap-2">

@@ -4,6 +4,7 @@ import { vectorSearchService } from "../services/vector-search";
 import { hackerNewsService } from "../services/hackernews";
 import { storage } from "../storage";
 import { log } from "../index";
+import type { ProgressCallback } from "../orchestrator/research-loop";
 
 export interface Candidate {
   title: string;
@@ -15,6 +16,23 @@ export interface Candidate {
 export interface ScoredCandidate extends Candidate {
   summary: string;
   relevanceScore: number;
+}
+
+/**
+ * Run items through an async function in concurrency-limited batches
+ */
+async function runInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
 }
 
 /**
@@ -49,7 +67,11 @@ export class ScoopHunterAgent {
     return this.ROUNDUP_PATTERNS.some(pattern => pattern.test(title));
   }
 
-  async run(mode: "standard" | "deep-dive" | "monthly" | "breaking" = "standard"): Promise<void> {
+  async run(
+    mode: "standard" | "deep-dive" | "monthly" | "breaking" = "standard",
+    onProgress?: ProgressCallback
+  ): Promise<void> {
+    const progress = onProgress || (() => {});
     log(`[ScoopHunter] Starting research cycle in ${mode} mode...`, "agent");
 
     try {
@@ -168,14 +190,49 @@ export class ScoopHunterAgent {
         searchQueries = await this.generateTrendQueries(dateFilter);
       }
 
-      const allCandidates: Candidate[] = [];
+      progress({
+        phase: "searching",
+        totalQueries: searchQueries.length,
+        completedQueries: 0,
+      });
 
-      for (const query of searchQueries) {
+      // ===== SEARCH PHASE: Run queries in parallel batches of 5 =====
+      const seenUrls = new Set<string>();
+      let completedQueries = 0;
+
+      const rawResultsByQuery = await runInBatches(searchQueries, 5, async (query) => {
         log(`[ScoopHunter] Searching: ${query}`, "agent");
-        const results = await geminiService.searchGrounded(query);
+        try {
+          const results = await geminiService.searchGrounded(query);
+          completedQueries++;
+          progress({ completedQueries });
+          return results;
+        } catch (error) {
+          log(`[ScoopHunter] Search failed for query: ${error}`, "agent");
+          completedQueries++;
+          progress({ completedQueries });
+          return [];
+        }
+      });
 
+      // Flatten all raw results
+      const allRawResults: Array<{ title: string; url: string; snippet: string }> = [];
+      for (const results of rawResultsByQuery) {
         for (const result of results) {
-          // 2. Check for duplicates (URL and semantic)
+          const cleanedUrl = this.cleanUrl(result.url);
+          if (seenUrls.has(cleanedUrl)) continue;
+          seenUrls.add(cleanedUrl);
+          allRawResults.push(result);
+        }
+      }
+
+      log(`[ScoopHunter] Search phase complete: ${allRawResults.length} unique raw results from ${searchQueries.length} queries`, "agent");
+
+      // ===== DEDUP PHASE: Check duplicates in parallel batches of 5 =====
+      progress({ phase: "deduplicating" });
+
+      const dedupResults = await runInBatches(allRawResults, 5, async (result) => {
+        try {
           const duplicateCheck = await vectorSearchService.checkDuplicate(
             result.url,
             result.title
@@ -186,32 +243,39 @@ export class ScoopHunterAgent {
               `[ScoopHunter] Skipping duplicate: ${result.title} (${duplicateCheck.matchType})`,
               "agent"
             );
-            continue;
+            return null;
           }
 
-          // 2b. Quick filter: Skip obvious roundup articles by title
+          // Quick filter: Skip obvious roundup articles by title
           if (this.isRoundupByTitle(result.title)) {
             log(
               `[ScoopHunter] Skipping roundup by title: ${result.title}`,
               "agent"
             );
-            continue;
+            return null;
           }
 
-          // Extract source domain from URL
           const source = this.extractSource(result.url);
 
-          allCandidates.push({
+          return {
             title: result.title,
             url: this.cleanUrl(result.url),
             snippet: result.snippet,
             source,
-          });
+          } as Candidate;
+        } catch (error) {
+          log(`[ScoopHunter] Dedup check failed: ${error}`, "agent");
+          return null;
         }
-      }
+      });
+
+      const allCandidates: Candidate[] = dedupResults.filter(
+        (c): c is Candidate => c !== null
+      );
 
       // Fetch from Hacker News for additional coverage (all modes)
       log("[ScoopHunter] Fetching trending AI stories from Hacker News...", "agent");
+      progress({ phase: "fetching Hacker News" });
       try {
         const hoursBack = mode === "breaking" ? 48 : mode === "monthly" ? 168 : 48; // 48h for breaking/standard, 7 days for monthly
         const minScore = mode === "monthly" ? 75 : 100; // Lower threshold for monthly
@@ -219,46 +283,57 @@ export class ScoopHunterAgent {
 
         log(`[ScoopHunter] Found ${hnStories.length} HN stories`, "agent");
 
-        for (const story of hnStories) {
-          // Check for duplicates
-          const duplicateCheck = await vectorSearchService.checkDuplicate(
-            story.url!,
-            story.title
-          );
+        // Dedup HN stories in parallel batches too
+        const hnDedupResults = await runInBatches(hnStories, 5, async (story) => {
+          if (!story.url || seenUrls.has(this.cleanUrl(story.url))) return null;
+          seenUrls.add(this.cleanUrl(story.url));
 
-          if (duplicateCheck.isDuplicate) {
-            continue;
+          try {
+            const duplicateCheck = await vectorSearchService.checkDuplicate(
+              story.url,
+              story.title
+            );
+            if (duplicateCheck.isDuplicate) return null;
+            if (this.isRoundupByTitle(story.title)) return null;
+
+            const source = this.extractSource(story.url);
+
+            return {
+              title: story.title,
+              url: this.cleanUrl(story.url),
+              snippet: `${story.score} points on Hacker News with ${story.descendants || 0} comments`,
+              source: `${source} (HN)`,
+            } as Candidate;
+          } catch {
+            return null;
           }
+        });
 
-          // Skip roundups by title
-          if (this.isRoundupByTitle(story.title)) {
-            continue;
-          }
-
-          const source = this.extractSource(story.url!);
-
-          allCandidates.push({
-            title: story.title,
-            url: this.cleanUrl(story.url!),
-            snippet: `${story.score} points on Hacker News with ${story.descendants || 0} comments`,
-            source: `${source} (HN)`,
-          });
-        }
+        allCandidates.push(
+          ...hnDedupResults.filter((c): c is Candidate => c !== null)
+        );
       } catch (error) {
         log(`[ScoopHunter] HN fetch failed: ${error}`, "agent");
       }
 
+      progress({ candidatesFound: allCandidates.length });
+
       if (allCandidates.length === 0) {
         log("[ScoopHunter] No new candidates found", "agent");
+        progress({ phase: "done", leadsStored: 0 });
         return;
       }
 
       log(`[ScoopHunter] Found ${allCandidates.length} unique candidates (including HN)`, "agent");
 
-      // 3. Score relevance and generate summaries
+      // ===== SCORING PHASE: Score in parallel batches of 5 =====
+      progress({ phase: "scoring" });
+
       const scoredCandidates = await this.scoreAndSummarize(allCandidates);
 
-      // 4. Store high-quality leads in database
+      // ===== SAVING PHASE: Store leads sequentially =====
+      progress({ phase: "saving" });
+
       let storedCount = 0;
       for (const candidate of scoredCandidates) {
         if (candidate.relevanceScore >= this.MIN_RELEVANCE_SCORE) {
@@ -277,9 +352,11 @@ export class ScoopHunterAgent {
         }
       }
 
+      progress({ phase: "done", leadsStored: storedCount });
       log(`[ScoopHunter] Research complete. Stored ${storedCount} new leads.`, "agent");
     } catch (error) {
       log(`[ScoopHunter] Error: ${error}`, "agent");
+      throw error;
     }
   }
 
@@ -302,7 +379,7 @@ export class ScoopHunterAgent {
     - Specific company breakthroughs (DeepSeek, OpenAI, Anthropic, etc.)
     - Niche but high-impact research
     - Cultural shifts or viral AI moments
-    
+
     Give concrete details, names, and dates.
     DO NOT list generic trends like "AI in healthcare". Give me ACTUAL NEWS EVENTS.`;
 
@@ -325,7 +402,7 @@ export class ScoopHunterAgent {
     ${trendContext}
 
     TODAY'S DATE: ${today}
-    
+
     Return JSON:
     {
       "trends": [
@@ -357,11 +434,10 @@ export class ScoopHunterAgent {
 
   /**
    * Score relevance and generate summaries for candidates
+   * Now runs scoring in parallel batches of 5
    */
   private async scoreAndSummarize(candidates: Candidate[]): Promise<ScoredCandidate[]> {
-    const scored: ScoredCandidate[] = [];
-
-    for (const candidate of candidates) {
+    const results = await runInBatches(candidates, 5, async (candidate) => {
       try {
         const prompt = `Analyze this AI news story for Hello Jumble, a newsletter that writes SINGLE-TOPIC stories with narrative headlines.
 
@@ -421,26 +497,28 @@ Return JSON:
             `[ScoopHunter] Skipping roundup: "${candidate.title}"`,
             "agent"
           );
-          continue;
+          return null;
         }
-
-        scored.push({
-          ...candidate,
-          summary: response.summary,
-          relevanceScore: Math.round(response.relevanceScore),
-        });
 
         log(
           `[ScoopHunter] Scored: "${candidate.title}" = ${response.relevanceScore}/100`,
           "agent"
         );
+
+        return {
+          ...candidate,
+          summary: response.summary,
+          relevanceScore: Math.round(response.relevanceScore),
+        } as ScoredCandidate;
       } catch (error) {
         log(`[ScoopHunter] Failed to score candidate: ${error}`, "agent");
-        // Skip candidates that fail scoring
+        return null;
       }
-    }
+    });
 
-    return scored.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    return results
+      .filter((c): c is ScoredCandidate => c !== null)
+      .sort((a, b) => b.relevanceScore - a.relevanceScore);
   }
 
   /**

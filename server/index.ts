@@ -163,4 +163,22 @@ app.use((req, res, next) => {
       researchOrchestrator.start();
     },
   );
+
+  // Graceful shutdown handler — gives in-flight research up to 10s to finish
+  function gracefulShutdown(signal: string) {
+    log(`${signal} received. Shutting down gracefully...`, "shutdown");
+    researchOrchestrator.stop();
+    httpServer.close(() => {
+      log("HTTP server closed", "shutdown");
+      process.exit(0);
+    });
+    // Force exit after 10s if connections don't close
+    setTimeout(() => {
+      log("Forcing shutdown after 10s timeout", "shutdown");
+      process.exit(1);
+    }, 10000);
+  }
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 })();

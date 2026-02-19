@@ -2,6 +2,21 @@ import { scoopHunterAgent } from "../agents/scoophunter";
 import { challengeGeneratorAgent } from "../agents/challenge-generator";
 import { log } from "../index";
 
+export interface ResearchProgress {
+  status: "idle" | "running" | "completed" | "failed";
+  mode: "standard" | "deep-dive" | "monthly" | "breaking" | null;
+  phase: string | null;
+  totalQueries: number;
+  completedQueries: number;
+  candidatesFound: number;
+  leadsStored: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+}
+
+export type ProgressCallback = (update: Partial<ResearchProgress>) => void;
+
 /**
  * Research Orchestrator
  * Runs background loop to continuously populate database with fresh leads
@@ -11,9 +26,29 @@ export class ResearchOrchestrator {
   private intervalHours: number;
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
+  private progress: ResearchProgress = {
+    status: "idle",
+    mode: null,
+    phase: null,
+    totalQueries: 0,
+    completedQueries: 0,
+    candidatesFound: 0,
+    leadsStored: 0,
+    startedAt: null,
+    completedAt: null,
+    error: null,
+  };
 
   constructor() {
     this.intervalHours = parseInt(process.env.RESEARCH_INTERVAL_HOURS || "6");
+  }
+
+  private updateProgress(update: Partial<ResearchProgress>): void {
+    this.progress = { ...this.progress, ...update };
+  }
+
+  getStatus(): ResearchProgress {
+    return { ...this.progress };
   }
 
   /**
@@ -51,16 +86,36 @@ export class ResearchOrchestrator {
     this.isRunning = true;
     const startTime = Date.now();
 
+    this.updateProgress({
+      status: "running",
+      mode,
+      phase: "starting",
+      totalQueries: 0,
+      completedQueries: 0,
+      candidatesFound: 0,
+      leadsStored: 0,
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      error: null,
+    });
+
     log(`[Orchestrator] ━━━ Starting Research Cycle (${mode}) ━━━`, "orchestrator");
 
     try {
       // 1. Research new leads
       log("[Orchestrator] Phase 1: Searching for news...", "orchestrator");
-      await scoopHunterAgent.run(mode);
+      this.updateProgress({ phase: "searching" });
+
+      const progressCallback: ProgressCallback = (update) => {
+        this.updateProgress(update);
+      };
+
+      await scoopHunterAgent.run(mode, progressCallback);
 
       // 2. Generate challenges (only on Mondays)
       if (this.shouldGenerateChallenges()) {
         log("[Orchestrator] Phase 2: Generating weekly challenges...", "orchestrator");
+        this.updateProgress({ phase: "generating challenges" });
         await challengeGeneratorAgent.run();
       } else {
         log("[Orchestrator] Skipping challenge generation (not Monday)", "orchestrator");
@@ -71,8 +126,20 @@ export class ResearchOrchestrator {
         `[Orchestrator] ✓ Research cycle complete (${duration}s)`,
         "orchestrator"
       );
+
+      this.updateProgress({
+        status: "completed",
+        phase: "done",
+        completedAt: new Date().toISOString(),
+      });
     } catch (error) {
       log(`[Orchestrator] ✗ Research cycle failed: ${error}`, "orchestrator");
+      this.updateProgress({
+        status: "failed",
+        phase: "error",
+        error: String(error),
+        completedAt: new Date().toISOString(),
+      });
     } finally {
       this.isRunning = false;
     }
