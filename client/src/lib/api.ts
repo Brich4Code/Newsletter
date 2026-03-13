@@ -46,7 +46,7 @@ export async function createCustomChallenge(prompt: string): Promise<Challenge> 
   return response.json();
 }
 
-export async function publishIssue(issue: InsertIssue): Promise<Issue> {
+export async function publishIssue(issue: InsertIssue & { newsletterType?: string }): Promise<Issue> {
   const response = await fetch(`${API_BASE}/issues/publish`, {
     method: "POST",
     headers: {

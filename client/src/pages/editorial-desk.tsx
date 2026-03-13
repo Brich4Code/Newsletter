@@ -61,6 +61,9 @@ export default function EditorialDesk() {
   const [customChallengeOpen, setCustomChallengeOpen] = useState(false);
   const [customChallengePrompt, setCustomChallengePrompt] = useState("");
 
+  // Newsletter type state
+  const [newsletterType, setNewsletterType] = useState<"jumble" | "overclocked">("jumble");
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
@@ -383,6 +386,7 @@ export default function EditorialDesk() {
       challengeId: selectedChallenge?.id || null,
       quickLinkIds: selectedLinks.map(l => l.id),
       googleDocsUrl: null,
+      newsletterType,
     });
   };
 
@@ -497,6 +501,30 @@ export default function EditorialDesk() {
           <div className="hidden sm:block">
             <h1 className="font-display font-bold text-lg tracking-tight leading-none">Editorial Desk</h1>
             <p className="text-xs text-muted-foreground mt-0.5">AI Newsroom</p>
+          </div>
+          <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+            <button
+              onClick={() => setNewsletterType("jumble")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                newsletterType === "jumble"
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Jumble
+            </button>
+            <button
+              onClick={() => setNewsletterType("overclocked")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                newsletterType === "overclocked"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Overclocked
+            </button>
           </div>
         </div>
 
