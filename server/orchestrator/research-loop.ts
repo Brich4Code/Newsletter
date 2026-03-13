@@ -78,6 +78,16 @@ export class ResearchOrchestrator {
    * Run a single research cycle
    */
   async runCycle(mode: "standard" | "deep-dive" | "monthly" | "breaking" = "standard"): Promise<void> {
+    // Safety: force-reset if stuck for over 30 minutes
+    if (this.isRunning && this.progress.startedAt) {
+      const startedAt = new Date(this.progress.startedAt).getTime();
+      const minutesElapsed = (Date.now() - startedAt) / 1000 / 60;
+      if (minutesElapsed > 30) {
+        log(`[Orchestrator] ⚠️ Force-resetting isRunning flag (stuck for ${minutesElapsed.toFixed(0)}min)`, "orchestrator");
+        this.isRunning = false;
+      }
+    }
+
     if (this.isRunning) {
       log("[Orchestrator] Research cycle already running, skipping", "orchestrator");
       return;

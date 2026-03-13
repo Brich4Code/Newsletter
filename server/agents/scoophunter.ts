@@ -190,6 +190,8 @@ export class ScoopHunterAgent {
         searchQueries = await this.generateTrendQueries(dateFilter);
       }
 
+      log(`[ScoopHunter] Mode: ${mode}, Date filter: ${dateFilter}, Query count: ${searchQueries.length}`, "agent");
+
       progress({
         phase: "searching",
         totalQueries: searchQueries.length,
@@ -330,6 +332,9 @@ export class ScoopHunterAgent {
       progress({ phase: "scoring" });
 
       const scoredCandidates = await this.scoreAndSummarize(allCandidates);
+
+      const passing = scoredCandidates.filter(c => c.relevanceScore >= this.MIN_RELEVANCE_SCORE).length;
+      log(`[ScoopHunter] Scoring complete: ${scoredCandidates.length} scored, ${passing} pass threshold (>=${this.MIN_RELEVANCE_SCORE})`, "agent");
 
       // ===== SAVING PHASE: Store leads sequentially =====
       progress({ phase: "saving" });
