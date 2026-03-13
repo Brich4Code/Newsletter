@@ -3,6 +3,7 @@ import { draftService } from "../services/draft-service";
 import { storage } from "../storage";
 import { log } from "../index";
 import type { Issue } from "@shared/schema";
+import type { NewsletterType } from "../config/style-guide";
 
 export interface PublicationResult {
   success: boolean;
@@ -37,7 +38,8 @@ export class PublicationPipeline {
 
       // Phase 2: Generate newsletter (AI researches, fact-checks, and writes in one go)
       log("[Pipeline] Phase 2: Generating newsletter (AI researching and writing)...", "pipeline");
-      const draft = await writerAgent.generateNewsletter(content, issue.issueNumber);
+      const nlType = (issue.newsletterType || "jumble") as NewsletterType;
+      const draft = await writerAgent.generateNewsletter(content, issue.issueNumber, nlType);
 
       // Phase 3: Create Draft in Supabase
       log("[Pipeline] Phase 3: Saving draft to Supabase...", "pipeline");
@@ -45,7 +47,8 @@ export class PublicationPipeline {
       const savedDraft = await draftService.createDraft(
         issue.issueNumber,
         draft,
-        issue.id
+        issue.id,
+        issue.newsletterType || "jumble"
       );
 
       log(`[Pipeline] Draft saved with ID: ${savedDraft.id}`, "pipeline");

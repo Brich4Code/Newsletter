@@ -20,7 +20,7 @@ export class DraftService {
         return draft;
     }
 
-    async createDraft(issueNumber: number, content: string, issueId?: string): Promise<NewsletterDraft> {
+    async createDraft(issueNumber: number, content: string, issueId?: string, newsletterType: string = "jumble"): Promise<NewsletterDraft> {
         // Check if exists
         const existing = await this.getDraftByIssue(issueNumber);
         if (existing) {
@@ -31,6 +31,7 @@ export class DraftService {
             issueNumber,
             content,
             issueId,
+            newsletterType,
             status: 'draft'
         }).returning();
 
