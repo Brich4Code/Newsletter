@@ -21,6 +21,12 @@ export interface SearchResult {
   snippet: string;
 }
 
+export interface YouTubeResult {
+  title: string;
+  url: string;
+  channel: string;
+}
+
 /**
  * Service wrapper for Google Gemini AI
  * Provides access to Flash (fast reasoning) and Pro (complex tasks) models
@@ -74,7 +80,6 @@ export class GeminiService {
       const result = await this.flashModel!.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: options?.temperature ?? 0.7,
           temperature: options?.temperature ?? 0.7,
           maxOutputTokens: options?.maxTokens ?? 8192,
           topP: options?.topP,
@@ -283,6 +288,80 @@ Requirements:
   }
 
   /**
+   * Search YouTube for relevant videos using Gemini's grounding feature
+   * Returns recent, relevant YouTube video results
+   */
+  async searchYouTube(topic: string, count: number = 2): Promise<YouTubeResult[]> {
+    this.initialize();
+
+    try {
+      log(`[Gemini YouTube] Searching for videos about: ${topic}`, "gemini");
+
+      const result = await this.flashModel!.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `Find ${count} recent, relevant YouTube videos about: ${topic}
+
+Requirements:
+- Videos from the last 30 days preferred
+- From reputable tech channels, news outlets, or official company channels
+- Must be relevant explainers, news coverage, or commentary
+- Prefer videos with substantial views
+
+Return as JSON array:
+[
+  {
+    "title": "Video title",
+    "url": "https://youtube.com/watch?v=VIDEO_ID",
+    "channel": "Channel Name"
+  }
+]
+
+Return ONLY the JSON array. Exactly ${count} results.`,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.3,
+        },
+        tools: [
+          {
+            googleSearch: {},
+          },
+        ],
+      });
+
+      const response = result.response;
+      const text = response.text();
+
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        try {
+          const videos: YouTubeResult[] = JSON.parse(jsonMatch[0]);
+          // Filter to only youtube.com URLs
+          const filtered = videos.filter(v =>
+            v.url && (v.url.includes("youtube.com") || v.url.includes("youtu.be"))
+          );
+          log(`[Gemini YouTube] Found ${filtered.length} videos`, "gemini");
+          return filtered.slice(0, count);
+        } catch (parseError) {
+          log(`[Gemini YouTube] JSON parse error: ${parseError}`, "gemini");
+        }
+      }
+
+      log("[Gemini YouTube] No videos found", "gemini");
+      return [];
+    } catch (error) {
+      log(`[Gemini YouTube] Error: ${error}`, "gemini");
+      return [];
+    }
+  }
+
+  /**
    * Generate text embeddings using gemini-embedding-001
    * Returns 768-dimensional vector for semantic search
    */
@@ -359,30 +438,6 @@ Requirements:
     }
   }
 
-  /**
-   * Generate an image from a text prompt
-   * Currently uses Pollinations.ai (free, no API key required)
-   * Can be upgraded to Imagen 3 via Vertex AI later
-   */
-  async generateImage(prompt: string): Promise<string> {
-    try {
-      log("[Gemini] Generating image with Pollinations.ai...", "gemini");
-
-      // URL-encode the prompt for Pollinations.ai
-      const encodedPrompt = encodeURIComponent(prompt);
-
-      // Pollinations.ai endpoint - generates images without API key
-      // Returns a direct image URL that can be used immediately
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=630&nologo=true`;
-
-      log(`[Gemini] Image generated: ${imageUrl}`, "gemini");
-
-      return imageUrl;
-    } catch (error) {
-      log(`[Gemini] Image generation error: ${error}`, "gemini");
-      throw new Error(`Failed to generate image: ${error}`);
-    }
-  }
 }
 
 // Singleton instance

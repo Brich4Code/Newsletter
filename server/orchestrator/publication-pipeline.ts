@@ -1,6 +1,4 @@
 import { writerAgent, type SimpleIssueContent, type StoryTopic } from "../agents/writer";
-import { illustratorAgent } from "../agents/illustrator";
-import { googleDocsService } from "../services/google-docs";
 import { draftService } from "../services/draft-service";
 import { storage } from "../storage";
 import { log } from "../index";
@@ -10,32 +8,23 @@ export interface PublicationResult {
   success: boolean;
   googleDocsUrl: string | null;
   error?: string;
-  warnings?: string[];
 }
 
 /**
  * Simplified Publication Pipeline
  * Leverages AI's native power for research, fact-checking, and writing
  *
- * NEW SIMPLIFIED FLOW:
+ * FLOW:
  * 1. Fetch basic story info (title, URL)
  * 2. Convert to simple topics
  * 3. Generate newsletter (AI researches, fact-checks, and writes)
- * 4. Generate hero image
- * 5. Create Google Doc with formatting
- * 6. Return Google Docs URL
- *
- * REMOVED:
- * - Separate investigator fact-checking phase (AI does this during research)
- * - Separate compliance officer validation (AI follows style guide natively)
- * - Complex pre-fetched summaries (AI researches fresh sources)
+ * 4. Save draft to Supabase
+ * 5. Return result
  */
 export class PublicationPipeline {
   async execute(issue: Issue): Promise<PublicationResult> {
     const startTime = Date.now();
     log(`[Pipeline] ━━━ Starting Simplified Publication for Issue #${issue.issueNumber} ━━━`, "pipeline");
-
-    const warnings: string[] = [];
 
     try {
       // Phase 1: Fetch basic story info and convert to simple topics
@@ -50,35 +39,8 @@ export class PublicationPipeline {
       log("[Pipeline] Phase 2: Generating newsletter (AI researching and writing)...", "pipeline");
       const draft = await writerAgent.generateNewsletter(content, issue.issueNumber);
 
-      // Phase 3: Generate hero image (non-blocking)
-      log("[Pipeline] Phase 3: Generating hero image...", "pipeline");
-      let heroImageUrl: string | null = null;
-      let heroImagePrompt: string | null = null;
-      try {
-        // Get the main story data for hero image generation
-        const mainStoryData = issue.mainStoryId
-          ? await storage.getLeadById(issue.mainStoryId)
-          : null;
-
-        if (mainStoryData) {
-          const imageResult = await illustratorAgent.generateHeroImage(mainStoryData);
-          if (imageResult) {
-            heroImageUrl = imageResult.imageUrl;
-            heroImagePrompt = imageResult.prompt;
-            log(`[Pipeline] Hero image generated: ${heroImageUrl}`, "pipeline");
-          }
-        }
-
-        if (!heroImageUrl) {
-          warnings.push("Hero image generation failed");
-        }
-      } catch (imageError) {
-        warnings.push(`Hero image skipped: ${imageError}`);
-        log(`[Pipeline] Hero image failed, continuing anyway: ${imageError}`, "pipeline");
-      }
-
-      // Phase 4: Create Draft in Supabase (New Flow)
-      log("[Pipeline] Phase 4: Saving draft to Supabase...", "pipeline");
+      // Phase 3: Create Draft in Supabase
+      log("[Pipeline] Phase 3: Saving draft to Supabase...", "pipeline");
 
       const savedDraft = await draftService.createDraft(
         issue.issueNumber,
@@ -86,29 +48,9 @@ export class PublicationPipeline {
         issue.id
       );
 
-      // Update draft with hero image if generated
-      if (heroImageUrl && heroImagePrompt) {
-        await draftService.updateDraftImage(savedDraft.id, heroImageUrl, heroImagePrompt);
-        log(`[Pipeline] Hero image saved to draft`, "pipeline");
-      }
-
       log(`[Pipeline] Draft saved with ID: ${savedDraft.id}`, "pipeline");
 
-      /* 
-      // LEGACY: Auto-create Google Doc
-      // Now handled via manual "Publish" button in Editor
-      
-      const googleDocsUrl = await googleDocsService.createNewsletterDocument({
-        markdown: draft,
-        heroImageUrl: heroImageUrl || undefined,
-        issueNumber: issue.issueNumber,
-      });
-      */
-
       const googleDocsUrl = null;
-
-      // Phase 5: Update issue record
-      // We might want to store draftId in issue, but issueId is in draft, so that's fine.
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       log(
@@ -119,7 +61,6 @@ export class PublicationPipeline {
       return {
         success: true,
         googleDocsUrl,
-        warnings: warnings.length > 0 ? warnings : undefined,
       };
     } catch (error) {
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -129,7 +70,6 @@ export class PublicationPipeline {
         success: false,
         googleDocsUrl: null,
         error: String(error),
-        warnings: warnings.length > 0 ? warnings : undefined,
       };
     }
   }
