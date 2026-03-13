@@ -1,7 +1,13 @@
 import { geminiService } from "../services/gemini";
 import { perplexityService } from "../services/perplexity";
-import { NewsletterStyleGuide } from "../config/style-guide";
+import { grokService } from "../services/grok";
+import { getStyleGuideRules, type NewsletterType } from "../config/style-guide";
 import { log } from "../index";
+
+const WORD_LIMITS = {
+  jumble: { min: 200, max: 250, target: 225 },
+  overclocked: { min: 75, max: 175, target: 125 },
+};
 
 /**
  * Escape special characters that could break template literals
@@ -45,7 +51,7 @@ export interface SimpleIssueContent {
  * NEW APPROACH - Leverage AI's native power:
  * 1. Phase 1 (Perplexity): Research stories with verified URLs and fact-checking (full research, no condensation)
  * 2. Phase 2 (Gemini Flash Preview): Write newsletter following style guide
- * 3. Phase 3 (Auto Word Count Fix): Validate 325-450 words, rewrite if needed (preserves links)
+ * 3. Phase 3 (Auto Word Count Fix): Validate word counts per type, rewrite if needed (preserves links)
  *
  * REMOVED:
  * - Pre-fetched story summaries
@@ -62,21 +68,25 @@ export class WriterAgent {
    * Generate newsletter from simple story topics
    * AI handles research, fact-checking, and writing
    */
-  async generateNewsletter(content: SimpleIssueContent, issueNumber: number): Promise<string> {
-    log("[Writer] Starting simplified three-phase generation...", "agent");
+  async generateNewsletter(
+    content: SimpleIssueContent,
+    issueNumber: number,
+    newsletterType: NewsletterType = "jumble"
+  ): Promise<string> {
+    log(`[Writer] Starting ${newsletterType} newsletter generation...`, "agent");
 
     try {
       // Phase 1: Research and fact-check using Perplexity (verified URLs)
       log("[Writer Phase 1] Researching and fact-checking stories with Perplexity...", "agent");
-      const research = await this.researchStories(content);
+      const research = await this.researchStories(content, newsletterType);
 
       // Phase 2: Write newsletter using Gemini Flash Preview
       log("[Writer Phase 2] Writing newsletter...", "agent");
-      let draft = await this.writeNewsletter(research, issueNumber);
+      let draft = await this.writeNewsletter(research, issueNumber, newsletterType);
 
-      // Phase 3: Validate and fix word counts (325-450 words per story)
+      // Phase 3: Validate and fix word counts
       log("[Writer Phase 3] Validating word counts...", "agent");
-      draft = await this.validateAndFixWordCounts(draft);
+      draft = await this.validateAndFixWordCounts(draft, newsletterType);
 
       log("[Writer] Draft generated successfully", "agent");
       return draft;
@@ -90,7 +100,7 @@ export class WriterAgent {
    * Phase 1: Research all stories using Perplexity
    * Perplexity provides verified URLs and fact-checked information
    */
-  private async researchStories(content: SimpleIssueContent): Promise<string> {
+  private async researchStories(content: SimpleIssueContent, newsletterType: NewsletterType): Promise<string> {
     const researchPrompts: { category: string; prompt: string }[] = [];
 
     // Main story research - escape all dynamic content
@@ -205,6 +215,67 @@ Keep it minimal — just 1-2 links max. Our readers don't want a research paper,
       )
     );
 
+    // Research tweets and YouTube videos for main and secondary stories
+    const tweetCount = newsletterType === "jumble" ? 2 : 1;
+    const videoCount = newsletterType === "jumble" ? 2 : 1;
+
+    log(`[Writer] Searching for tweets and YouTube videos...`, "agent");
+
+    const mediaPromises: Promise<void>[] = [];
+    const tweetsByCategory: { [key: string]: string[] } = {};
+    const videosByCategory: { [key: string]: string[] } = {};
+
+    // Main story media
+    mediaPromises.push(
+      grokService.searchTweets(content.mainStory.title, tweetCount).then(tweets => {
+        tweetsByCategory["Main Story"] = tweets.map(t =>
+          `> "${t.text}" — [@${t.handle}](${t.url})`
+        );
+      }),
+      geminiService.searchYouTube(content.mainStory.title, videoCount).then(videos => {
+        videosByCategory["Main Story"] = videos.map(v =>
+          `🎬 [${v.title}](${v.url})`
+        );
+      })
+    );
+
+    // Secondary story media
+    if (content.secondaryStory) {
+      mediaPromises.push(
+        grokService.searchTweets(content.secondaryStory.title, tweetCount).then(tweets => {
+          tweetsByCategory["Secondary Story"] = tweets.map(t =>
+            `> "${t.text}" — [@${t.handle}](${t.url})`
+          );
+        }),
+        geminiService.searchYouTube(content.secondaryStory.title, videoCount).then(videos => {
+          videosByCategory["Secondary Story"] = videos.map(v =>
+            `🎬 [${v.title}](${v.url})`
+          );
+        })
+      );
+    }
+
+    await Promise.all(mediaPromises);
+
+    // Build media sections
+    const mediaSections = `
+---
+# TWEET & VIDEO BANK
+⚠️ Embed these tweets and videos in the corresponding stories.
+
+**Main Story Tweets:**
+${tweetsByCategory["Main Story"]?.join('\n') || '- (No tweets found)'}
+
+**Main Story YouTube:**
+${videosByCategory["Main Story"]?.join('\n') || '- (No videos found)'}
+
+**Secondary Story Tweets:**
+${tweetsByCategory["Secondary Story"]?.join('\n') || '- (No tweets found)'}
+
+**Secondary Story YouTube:**
+${videosByCategory["Secondary Story"]?.join('\n') || '- (No videos found)'}
+---`;
+
     // Build research document with URL bank (using full Perplexity output)
     const researchSections: string[] = [];
     const urlsByCategory: { [key: string]: string[] } = {
@@ -249,7 +320,7 @@ ${urlsByCategory["Weekly Scoop"].map(url => `- ${url}`).join('\n') || '- (No URL
 ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No URLs found)'}
 ---`;
 
-    const fullResearch = researchSections.join('\n') + '\n' + urlBank;
+    const fullResearch = researchSections.join('\n') + '\n' + urlBank + '\n' + mediaSections;
 
     const totalResearchWords = fullResearch.split(/\s+/).length;
     log(`[Writer] Research complete. Found ${results.reduce((sum, r) => sum + r.citations.length, 0)} verified URLs`, "agent");
@@ -264,51 +335,50 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
    * we told the AI to output content without labels. Instead we check for
    * structural elements that should be present.
    */
-  private isNewsletterComplete(draft: string): { complete: boolean; missing: string[] } {
+  private isNewsletterComplete(draft: string, type: NewsletterType): { complete: boolean; missing: string[] } {
     const missing: string[] = [];
 
-    // Check for Welcome section (should contain "Welcome to Jumble" or similar)
-    if (!/Welcome to Jumble|Welcome to this week/i.test(draft)) {
-      missing.push('Welcome section');
+    if (type === "jumble") {
+      // Check for Welcome section (should contain "Welcome to Jumble" or similar)
+      if (!/Welcome to Jumble|Welcome to this week/i.test(draft)) {
+        missing.push('Welcome section');
+      }
+
+      // Check for "In this newsletter" bullet list (handle curly apostrophes)
+      if (!/In this newsletter|In today.s newsletter/i.test(draft)) {
+        missing.push('In this newsletter bullets');
+      }
+
+      // Jumble uses H1 markdown headers
+      const h1Count = (draft.match(/^#\s+[^\n]+/gm) || []).length;
+      if (h1Count < 2) {
+        missing.push(`Story H1 headers (found ${h1Count}, need 2)`);
+      }
     }
 
-    // Check for "In this newsletter" bullet list (handle curly apostrophes)
-    if (!/In this newsletter|In today.s newsletter/i.test(draft)) {
-      missing.push('In this newsletter bullets');
+    if (type === "overclocked") {
+      // Overclocked stories use italic teaser lines (*text*) as structural markers
+      const teaserCount = (draft.match(/^\*[^*\n]+\*$/gm) || []).length;
+      if (teaserCount < 2) {
+        missing.push(`Story italic teasers (found ${teaserCount}, need 2 for 2 stories)`);
+      }
     }
 
-    // Check for at least 2 H1 headers (main and secondary stories)
-    const h1Count = (draft.match(/^#\s+[^\n]+/gm) || []).length;
-    if (h1Count < 2) {
-      missing.push(`Story H1 headers (found ${h1Count}, need 2)`);
-    }
+    // Both types need weekly scoop and challenge
+    if (!/weekly scoop/i.test(draft)) missing.push('Weekly Scoop');
+    if (!/weekly challenge|what.s the challenge/i.test(draft)) missing.push('Weekly Challenge');
 
-    // Check for Weekly Scoop section
-    if (!/Weekly Scoop/i.test(draft)) {
-      missing.push('Weekly Scoop');
-    }
+    // Both need wrap up
+    if (type === "jumble" && !/wrap.?up/i.test(draft)) missing.push('Wrap Up');
+    if (type === "overclocked" && !/hear your thoughts|wrap.?up/i.test(draft)) missing.push('Wrap Up');
 
-    // Check for Weekly Challenge section
-    if (!/Weekly Challenge|Challenge:/i.test(draft)) {
-      missing.push('Weekly Challenge');
-    }
-
-    // Check for Wrap Up section
-    if (!/Wrap Up|wrap.up/i.test(draft)) {
-      missing.push('Wrap Up');
-    }
-
-    // Check for Sources section
-    if (!/##?\s*Sources/i.test(draft)) {
-      missing.push('Sources');
-    }
+    // Both need sources
+    if (!/##?\s*Sources/i.test(draft)) missing.push('Sources');
 
     // Check for proper ending (not cut off mid-sentence)
     const trimmed = draft.trim();
     const endsWithPunctuation = /[.!?)\]":]$/.test(trimmed) || trimmed.endsWith('---');
-    if (!endsWithPunctuation) {
-      missing.push('Proper ending (content appears cut off)');
-    }
+    if (!endsWithPunctuation) missing.push('Proper ending (content appears cut off)');
 
     return { complete: missing.length === 0, missing };
   }
@@ -354,8 +424,9 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
    * Validate that main and secondary stories have embedded URLs
    * Stories should have 5-7 embedded links each
    */
-  private validateStoryLinks(draft: string): { valid: boolean; issues: string[] } {
+  private validateStoryLinks(draft: string, type: NewsletterType): { valid: boolean; issues: string[] } {
     const issues: string[] = [];
+    const minLinks = type === "overclocked" ? 2 : 3;
 
     // Find all H1 headers
     const h1Headers = Array.from(draft.matchAll(/^#\s+[^\n]+$/gm));
@@ -370,8 +441,8 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
 
     // Count embedded links in main story [text](url)
     const mainLinks = (mainStory.match(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g) || []).length;
-    if (mainLinks < 3) {
-      issues.push(`Main story has only ${mainLinks} embedded links (need at least 5-7)`);
+    if (mainLinks < minLinks) {
+      issues.push(`Main story has only ${mainLinks} embedded links (need at least ${minLinks})`);
     }
 
     // Extract secondary story (second H1 to Weekly Scoop or end)
@@ -381,20 +452,31 @@ ${urlsByCategory["Weekly Challenge"].map(url => `- ${url}`).join('\n') || '- (No
 
     // Count embedded links in secondary story
     const secondaryLinks = (secondaryStory.match(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g) || []).length;
-    if (secondaryLinks < 3) {
-      issues.push(`Secondary story has only ${secondaryLinks} embedded links (need at least 5-7)`);
+    if (secondaryLinks < minLinks) {
+      issues.push(`Secondary story has only ${secondaryLinks} embedded links (need at least ${minLinks})`);
     }
 
     return { valid: issues.length === 0, issues };
   }
 
   /**
-   * Phase 2: Write newsletter using Gemini Flash Preview with style guide
-   * AI crafts the final newsletter following all rules
-   * Includes retry logic for truncation and validation
+   * Build the correct writing prompt based on newsletter type
    */
-  private async writeNewsletter(research: string, issueNumber: number): Promise<string> {
-    const writePrompt = `You are the writer for Hello Jumble, a newsletter about AI news. You are generating Issue #${issueNumber}.
+  private buildWritePrompt(research: string, issueNumber: number, type: NewsletterType): string {
+    const rules = getStyleGuideRules(type);
+    const limits = WORD_LIMITS[type];
+
+    if (type === "overclocked") {
+      return this.buildOverclockedPrompt(research, issueNumber, rules, limits);
+    }
+    return this.buildJumblePrompt(research, issueNumber, rules, limits);
+  }
+
+  /**
+   * Build writing prompt for Jumble newsletter format
+   */
+  private buildJumblePrompt(research: string, issueNumber: number, rules: string, limits: { min: number; max: number; target: number }): string {
+    return `You are the writer for Hello Jumble, a newsletter about AI news. You are generating Issue #${issueNumber}.
 
 # RESEARCH NOTES:
 
@@ -402,7 +484,7 @@ ${research}
 
 # CRITICAL STYLE GUIDE - YOU MUST FOLLOW THESE RULES:
 
-${NewsletterStyleGuide.rules}
+${rules}
 
 # YOUR TASK:
 
@@ -425,11 +507,17 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
    - Then output 5 separate lines, each starting with an emoji
    - Format: emoji + space + description (one per line)
 6. **Main Story** - MUST be a separate H1 header with emoji (e.g., "# 🤖 Your Story Title")
-  - ~400 words with 2-3 H2 subsections with emojis
+  - ~${limits.target} words with 2-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Main Story URL bank throughout the story
+  - Embed 1-2 tweets from Tweet bank: > "tweet text" — [@handle](url)
+  - Embed 1-2 YouTube videos from YouTube bank: 🎬 [Title](url)
+  - Include 1 poll per story (question + 2-3 options as bullet list)
 7. **Secondary Story** - MUST be a separate H1 header with emoji (NOT nested under main story)
-  - ~350 words with 1-3 H2 subsections with emojis
+  - ~${limits.target} words with 1-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Secondary Story URL bank throughout the story
+  - Embed 1-2 tweets from Tweet bank: > "tweet text" — [@handle](url)
+  - Embed 1-2 YouTube videos from YouTube bank: 🎬 [Title](url)
+  - Include 1 poll per story (question + 2-3 options as bullet list)
 8. **Weekly Scoop 📢** - Output as "## Weekly Scoop 📢" followed by 6 headlines
   - Each headline: emoji + [markdown link](url)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
@@ -477,9 +565,18 @@ In this newsletter:
 
 First paragraph of main story...
 
+> "Notable tweet about the story" — [@expert](https://x.com/expert/status/123)
+
 ## 🔍 First H2 Subsection
 
 Content with [embedded links](https://url.com)...
+
+🎬 [Relevant Video Title](https://youtube.com/watch?v=abc)
+
+Should AI companies prioritize safety over speed?
+- Yes, safety first
+- No, innovation matters more
+- It depends on the context
 
 # 💡 Secondary Story H1 Title Here
 
@@ -549,6 +646,12 @@ Wrap up content...
 - ⚠️ Write ORIGINAL headlines in your own words. Do NOT copy verbatim from sources
 - NO plain text headlines - every single one MUST be [clickable](url)
 
+## Tweet and Video Embedding:
+- Embed tweets EXACTLY as provided in the TWEET & VIDEO BANK
+- Embed YouTube videos EXACTLY as provided in the TWEET & VIDEO BANK
+- Use the format: > "tweet text" — [@handle](url) for tweets
+- Use the format: 🎬 [Video Title](url) for YouTube videos
+
 ## Sources Section (Section 11):
 After the Wrap Up section, add:
 
@@ -584,8 +687,8 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ Newsletter Title (just the text, NO "Section 3:" label)
 ✓ Welcome message (starts with "Welcome to Jumble...")
 ✓ "In this newsletter:" bullets (5 bullets with emojis, EACH ON A SEPARATE LINE)
-✓ Main Story (separate H1 like "# 🤖 Title", ~400 words, with 5-7 embedded links)
-✓ Secondary Story (separate H1 like "# 💡 Title", ~350 words, with 5-7 embedded links)
+✓ Main Story (separate H1 like "# 🤖 Title", ~${limits.target} words, with 5-7 embedded links, 1-2 tweets, 1-2 YouTube videos, 1 poll)
+✓ Secondary Story (separate H1 like "# 💡 Title", ~${limits.target} words, with 5-7 embedded links, 1-2 tweets, 1-2 YouTube videos, 1 poll)
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
   - ✅ 🤖 [Headline text](https://url.com) = CORRECT
   - ❌ 🤖 Headline text = WRONG (missing URL)
@@ -601,6 +704,110 @@ CRITICAL OUTPUT INSTRUCTIONS:
 3. Output ONLY the final newsletter content with sections in the correct order
 4. Do NOT stop generating until you have written the Sources section at the very end
 5. Wrap the entire output in a markdown code block (\`\`\`markdown ... \`\`\`).`;
+  }
+
+  /**
+   * Build writing prompt for Overclocked newsletter format
+   */
+  private buildOverclockedPrompt(research: string, issueNumber: number, rules: string, limits: { min: number; max: number; target: number }): string {
+    return `You are the writer for Overclocked, a punchy AI newsletter. Issue #${issueNumber}.
+
+# RESEARCH NOTES:
+
+${research}
+
+# STYLE GUIDE:
+
+${rules}
+
+# YOUR TASK:
+
+Write the COMPLETE newsletter. Overclocked is conversational, punchy, like texting a friend.
+
+# REQUIRED STRUCTURE (output in this order, NO section labels):
+
+1. **Date line**: "Mon, March 14 at 6:00 AM" format (use today's date)
+2. **Main Story**: lowercase headline + emoji at END (e.g., "Claude just became #1 in the app store 👑")
+   - Italic teaser line: *short provocative question*
+   - Body text, ~${limits.target} words
+   - 2-3 lowercase Q&A sub-headers (e.g., "what happened?", "👀 wait, them too?")
+   - Embed 3-5 URLs from Main Story URL bank
+   - Embed 1 tweet from Main Story Tweets bank: > "tweet text" — [@handle](url)
+   - Embed 1 YouTube video from Main Story YouTube bank: 🎬 [Title](url)
+   - 1 poll: question + 2-3 options as bullet list
+3. **Secondary Story**: same format as main, lowercase headline + emoji at END
+   - Italic teaser, ~${limits.target} words, Q&A sub-headers
+   - 3-5 URLs, 1 tweet, 1 YouTube, 1 poll
+4. **weekly scoop 🍦** (lowercase): 6 emoji headlines, each as [text](url)
+5. **weekly challenge**: "what's the challenge?" intro, 3-5 emoji steps
+6. **Wrap Up**: 1-2 questions + "We'd love to hear your thoughts!"
+7. **Sign-off**: "Zoe from Overclocked"
+8. **Sources**: URLs grouped by section
+
+# URL EMBEDDING RULES:
+- ONLY use URLs from the VERIFIED URL BANK
+- COPY URLs exactly — do NOT invent URLs
+- Embed tweets exactly as provided in TWEET BANK
+- Embed YouTube videos exactly as provided in VIDEO BANK
+
+# OUTPUT FORMAT EXAMPLE:
+\`\`\`
+Mon, March 14 at 6:00 AM
+
+Claude just became #1 in the app store 👑
+
+*it's ahead of ChatGPT now?*
+
+Body text here with [embedded link](url)...
+
+what happened?
+
+More text with [another link](url)...
+
+> "Tweet text here" — [@handle](https://x.com/...)
+
+🎬 [Video Title](https://youtube.com/watch?v=...)
+
+Should AI companies prioritize ethics over features?
+- Yes, absolutely
+- No, features matter more
+- It depends
+
+secondary story headline here 🧠
+
+*teaser line*
+
+...same format...
+
+weekly scoop 🍦
+
+🤖 [Headline](url)
+...6 items...
+
+weekly challenge
+
+what's the challenge?
+
+Challenge text with emoji steps...
+
+Questions here? We'd love to hear your thoughts!
+
+Zoe from Overclocked
+
+## Sources
+**Main Story:** ...
+\`\`\`
+
+CRITICAL: Output ONLY the newsletter. No explanations. Wrap in \`\`\`markdown ... \`\`\`.`;
+  }
+
+  /**
+   * Phase 2: Write newsletter using Gemini Flash Preview with style guide
+   * AI crafts the final newsletter following all rules
+   * Includes retry logic for truncation and validation
+   */
+  private async writeNewsletter(research: string, issueNumber: number, newsletterType: NewsletterType): Promise<string> {
+    const writePrompt = this.buildWritePrompt(research, issueNumber, newsletterType);
 
     const MAX_RETRIES = 3;
     let draft = '';
@@ -628,7 +835,9 @@ CRITICAL OUTPUT INSTRUCTIONS:
         log(`[Writer] Extracted from markdown code block`, "agent");
       } else {
         // Fallback: strip any leading conversational text
-        const possibleStarts = ["Subject Line", "Welcome to Jumble", "# "];
+        const possibleStarts = newsletterType === "overclocked"
+          ? ["Mon,", "Tue,", "Wed,", "Thu,", "Fri,", "Sat,", "Sun,"]
+          : ["Subject Line", "Welcome to Jumble", "# "];
         let earliestStart = -1;
 
         for (const start of possibleStarts) {
@@ -645,9 +854,9 @@ CRITICAL OUTPUT INSTRUCTIONS:
       }
 
       // Validate completeness
-      const completionCheck = this.isNewsletterComplete(draft);
+      const completionCheck = this.isNewsletterComplete(draft, newsletterType);
       const scoopCheck = this.validateWeeklyScoop(draft);
-      const storyLinksCheck = this.validateStoryLinks(draft);
+      const storyLinksCheck = this.validateStoryLinks(draft, newsletterType);
       lastIssues = [...completionCheck.missing, ...scoopCheck.issues, ...storyLinksCheck.issues];
 
       if (completionCheck.complete && scoopCheck.valid && storyLinksCheck.valid) {
@@ -689,9 +898,10 @@ CRITICAL OUTPUT INSTRUCTIONS:
    * Ensures both stories are between 325-450 words (50 word tolerance over 400)
    * Auto-fixes if out of range while preserving all embedded links
    */
-  private async validateAndFixWordCounts(draft: string): Promise<string> {
+  private async validateAndFixWordCounts(draft: string, type: NewsletterType): Promise<string> {
     // Extract main and secondary story sections
     const sections = this.extractStorySections(draft);
+    const limits = WORD_LIMITS[type];
 
     log(`[Writer] Extracted sections - Main: ${sections.mainStory ? 'YES' : 'NO'}, Secondary: ${sections.secondaryStory ? 'YES' : 'NO'}`, "agent");
 
@@ -703,22 +913,18 @@ CRITICAL OUTPUT INSTRUCTIONS:
     let updatedDraft = draft;
     let needsRewrite = false;
 
-    // Word count limits: 325-450 (50 word tolerance over target of 400)
-    const MIN_WORDS = 325;
-    const MAX_WORDS = 450;
-
     // Check main story word count
     if (sections.mainStory) {
       const mainWordCount = this.countWords(sections.mainStory.content);
       log(`[Writer] Main story word count: ${mainWordCount}`, "agent");
 
       // Only rewrite if word count is reasonable (not suspiciously low like 12 words)
-      if (mainWordCount < 100) {
+      if (mainWordCount < Math.min(50, limits.min)) {
         log(`[Writer] ⚠️ Main story word count suspiciously low (${mainWordCount}). Skipping rewrite to avoid errors.`, "agent");
         log(`[Writer] Main story content length: ${sections.mainStory.content.length} chars`, "agent");
-      } else if (mainWordCount < MIN_WORDS || mainWordCount > MAX_WORDS) {
-        log(`[Writer] Main story out of range (${MIN_WORDS}-${MAX_WORDS}). Rewriting to 375 words...`, "agent");
-        const rewritten = await this.rewriteToWordCount(sections.mainStory.content, 375);
+      } else if (mainWordCount < limits.min || mainWordCount > limits.max) {
+        log(`[Writer] Main story out of range (${limits.min}-${limits.max}). Rewriting to ${limits.target} words...`, "agent");
+        const rewritten = await this.rewriteToWordCount(sections.mainStory.content, limits.target);
         updatedDraft = updatedDraft.replace(sections.mainStory.content, rewritten);
         needsRewrite = true;
       }
@@ -730,12 +936,12 @@ CRITICAL OUTPUT INSTRUCTIONS:
       log(`[Writer] Secondary story word count: ${secondaryWordCount}`, "agent");
 
       // Only rewrite if word count is reasonable (not suspiciously low)
-      if (secondaryWordCount < 100) {
+      if (secondaryWordCount < Math.min(50, limits.min)) {
         log(`[Writer] ⚠️ Secondary story word count suspiciously low (${secondaryWordCount}). Skipping rewrite to avoid errors.`, "agent");
         log(`[Writer] Secondary story content length: ${sections.secondaryStory.content.length} chars`, "agent");
-      } else if (secondaryWordCount < MIN_WORDS || secondaryWordCount > MAX_WORDS) {
-        log(`[Writer] Secondary story out of range (${MIN_WORDS}-${MAX_WORDS}). Rewriting to 375 words...`, "agent");
-        const rewritten = await this.rewriteToWordCount(sections.secondaryStory.content, 375);
+      } else if (secondaryWordCount < limits.min || secondaryWordCount > limits.max) {
+        log(`[Writer] Secondary story out of range (${limits.min}-${limits.max}). Rewriting to ${limits.target} words...`, "agent");
+        const rewritten = await this.rewriteToWordCount(sections.secondaryStory.content, limits.target);
         updatedDraft = updatedDraft.replace(sections.secondaryStory.content, rewritten);
         needsRewrite = true;
       }
