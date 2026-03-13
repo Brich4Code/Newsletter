@@ -1,5 +1,5 @@
 Hello Jumble Newsletter Rules
-Last updated: 2025-08-15
+Last updated: 2026-03-14
 Core Principles
 No two part headers and no punctuation in headers (no dashes, colons, commas).
 Headers use Title Case.
@@ -75,8 +75,11 @@ The judge’s decision to let a jury weigh the evidence means internal OpenAI do
 If the jury finds in favor of Musk, the consequences could be catastrophic for OpenAI's current valuation. Musk is seeking unspecified ill-gotten gains, but a ruling could theoretically impact how AI companies transition from nonprofits to commercial giants. Beyond the finances, the trial could force OpenAI to open-source more of its technology, a key demand of Musk’s initial suit.
 
 With Musk’s own xAI currently valued at over $230 billion, this trial is as much about market dominance as it is about legal ethics. The outcome will likely set a major precedent for how the biggest names in tech manage the tension between altruistic goals and massive profits.")
-Target length about 400 words.
+Target length 200 to 250 words.
 Embed reputable, recent sources. Add placeholders for posts or video when needed.
+One to two embedded tweets per story: > "tweet text" — [@handle](url)
+One to two embedded YouTube videos per story: 🎬 [Video Title](youtube-url)
+One poll per story after a key claim (question + 2-3 options as a list).
 Secondary Story
 H1 with emoji in the front (ex. 🧠 Gemini Evolves Into Your Personal Assistant)
 One intro paragraph.
@@ -100,8 +103,11 @@ YouTube video by Jason Howell
 I Tested Gemini's New 'Personal Intelligence' and It's Revealing
 
 It can even help with big purchases by researching products that fit your specific needs and past preferences. By remembering your hobbies and life goals, the AI offers suggestions that feel more like advice from a close friend than a search engine result. It is a bold step toward AI that doesn't just process information but understands your personal narrative.')
-Target length about 350 words.
+Target length 200 to 250 words.
 Same linking rules as above.
+One to two embedded tweets per story: > "tweet text" — [@handle](url)
+One to two embedded YouTube videos per story: 🎬 [Video Title](youtube-url)
+One poll per story after a key claim (question + 2-3 options as a list).
 Weekly Scoop 📢
 Six headlines. Each headline MUST be an embedded markdown link with the URL inside.
 Format: 🤖 [Headline text describing the story](https://actual-source-url.com)
