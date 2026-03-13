@@ -2,6 +2,7 @@ import { geminiService } from "../services/gemini";
 import { perplexityService } from "../services/perplexity";
 import { vectorSearchService } from "../services/vector-search";
 import { hackerNewsService } from "../services/hackernews";
+import { grokService } from "../services/grok";
 import { storage } from "../storage";
 import { log } from "../index";
 import type { ProgressCallback } from "../orchestrator/research-loop";
@@ -316,6 +317,54 @@ export class ScoopHunterAgent {
         );
       } catch (error) {
         log(`[ScoopHunter] HN fetch failed: ${error}`, "agent");
+      }
+
+      // Fetch from Grok/X for additional breaking news coverage (breaking mode only)
+      if (mode === "breaking") {
+        log("[ScoopHunter] Fetching trending AI stories from X via Grok...", "agent");
+        progress({ phase: "fetching X/Twitter" });
+        try {
+          const grokQueries = [
+            "OpenAI breaking news",
+            "AI trending",
+            "Anthropic Claude news",
+            "AI controversy viral",
+          ];
+          const grokStories = await grokService.searchBreakingNews(grokQueries);
+
+          log(`[ScoopHunter] Found ${grokStories.length} Grok/X stories`, "agent");
+
+          const grokDedupResults = await runInBatches(grokStories, 5, async (story) => {
+            if (!story.url || seenUrls.has(this.cleanUrl(story.url))) return null;
+            seenUrls.add(this.cleanUrl(story.url));
+
+            try {
+              const duplicateCheck = await vectorSearchService.checkDuplicate(
+                story.url,
+                story.title
+              );
+              if (duplicateCheck.isDuplicate) return null;
+              if (this.isRoundupByTitle(story.title)) return null;
+
+              const source = this.extractSource(story.url);
+
+              return {
+                title: story.title,
+                url: this.cleanUrl(story.url),
+                snippet: story.snippet,
+                source: `${source} (X)`,
+              } as Candidate;
+            } catch {
+              return null;
+            }
+          });
+
+          allCandidates.push(
+            ...grokDedupResults.filter((c): c is Candidate => c !== null)
+          );
+        } catch (error) {
+          log(`[ScoopHunter] Grok/X fetch failed: ${error}`, "agent");
+        }
       }
 
       progress({ candidatesFound: allCandidates.length });
