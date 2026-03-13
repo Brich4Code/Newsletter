@@ -52,6 +52,7 @@ export const issues = pgTable("issues", {
   secondaryStoryId: varchar("secondary_story_id").references(() => leads.id),
   challengeId: varchar("challenge_id").references(() => challenges.id),
   quickLinkIds: text("quick_link_ids").array().notNull().default(sql`ARRAY[]::text[]`),
+  newsletterType: text("newsletter_type").default("jumble").notNull(),
   googleDocsUrl: text("google_docs_url"),
   publishedAt: timestamp("published_at").defaultNow().notNull(),
 });
@@ -121,6 +122,7 @@ export const newsletterDrafts = pgTable("newsletter_drafts", {
   issueNumber: integer("issue_number").notNull(),
   content: text("content").notNull(),
   status: text("status").notNull().default("draft"), // draft, published, archived
+  newsletterType: text("newsletter_type").default("jumble").notNull(),
   googleDocsUrl: text("google_docs_url"),
   heroImageUrl: text("hero_image_url"),
   heroImagePrompt: text("hero_image_prompt"), // Editable prompt for regenerating image
