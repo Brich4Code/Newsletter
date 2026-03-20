@@ -50,7 +50,10 @@ Requirements:
 - Find real, recent posts (last 7 days preferred)
 - Posts should be from notable accounts, journalists, industry figures, or viral threads
 - Each post must have substantial engagement or come from a verified/notable account
-- Prefer posts that add opinion, reaction, or insider info (not just resharing a link)
+- CRITICAL: Only include tweets that add ADDITIONAL INFORMATION, insider perspective, expert analysis, or show something visually interesting beyond the news story itself
+- Do NOT include tweets that simply announce, restate, or link to the news story
+- Good example: an expert reacting with new context, a researcher sharing data, someone showing a demo
+- Bad example: a news outlet tweeting their own headline, someone just sharing the article link
 
 Return as JSON array:
 [

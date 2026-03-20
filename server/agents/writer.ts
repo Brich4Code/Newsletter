@@ -216,6 +216,9 @@ Keep it minimal — just 1-2 links max. Our readers don't want a research paper,
     );
 
     // Research tweets and YouTube videos for main and secondary stories
+    // Jumble: max 2 media total per story (tweets + videos combined)
+    // Overclocked: 1 YouTube OR 1 Tweet per story (prefer YouTube)
+    // We fetch extras so the writer prompt can pick the best ones
     const tweetCount = newsletterType === "jumble" ? 2 : 1;
     const videoCount = newsletterType === "jumble" ? 2 : 1;
 
@@ -257,11 +260,18 @@ Keep it minimal — just 1-2 links max. Our readers don't want a research paper,
 
     await Promise.all(mediaPromises);
 
-    // Build media sections
+    // Build media sections with type-specific limits
+    const mediaLimitNote = newsletterType === "overclocked"
+      ? `⚠️ MEDIA LIMIT: Each story gets ONE YouTube video OR ONE tweet (not both). Prefer YouTube videos — they look better and get more clicks. Only use a tweet if there is no good YouTube video.`
+      : `⚠️ MEDIA LIMIT: Each story gets a MAXIMUM of 2 media embeds total (tweets + YouTube videos combined). Example: 1 YouTube + 1 tweet, or 2 YouTube videos.`;
+
+    const tweetQualityNote = `⚠️ TWEET QUALITY: Only embed tweets that add NEW information, insider perspective, or show something interesting. Do NOT embed tweets that simply announce or restate the news story.`;
+
     const mediaSections = `
 ---
 # TWEET & VIDEO BANK
-⚠️ Embed these tweets and videos in the corresponding stories.
+${mediaLimitNote}
+${tweetQualityNote}
 
 **Main Story Tweets:**
 ${tweetsByCategory["Main Story"]?.join('\n') || '- (No tweets found)'}
@@ -509,15 +519,18 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 6. **Main Story** - MUST be a separate H1 header with emoji (e.g., "# 🤖 Your Story Title")
   - ~${limits.target} words with 2-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Main Story URL bank throughout the story
-  - Embed 1-2 tweets from Tweet bank: > "tweet text" — [@handle](url)
-  - Embed 1-2 YouTube videos from YouTube bank: 🎬 [Title](url)
-  - Include 1 poll per story (question + 2-3 options as bullet list)
+  - Max 2 media embeds total (tweets + YouTube combined). Example: 1 YouTube + 1 tweet
+  - Only embed tweets that add NEW info beyond the story. Skip tweets that just announce the news.
+  - YouTube videos: 🎬 [Title](url)
+  - Tweets: > "tweet text" — [@handle](url)
+  - Include 1 poll (question + 2-3 options as bullet list). This should be the ONLY poll in the newsletter unless the secondary story has a better one.
+  - Poll must be something people are heavily opinionated about: personal behavior, moral/ethical debate, fear/concern, or interactive challenge.
+  - Good polls: "Do you say please and thank you to AI?", "Is this a good idea?", "Have you tried X yet?", "Are we replacing too many jobs?"
 7. **Secondary Story** - MUST be a separate H1 header with emoji (NOT nested under main story)
   - ~${limits.target} words with 1-3 H2 subsections with emojis
   - 🔗 MUST embed 5-7 different URLs from Secondary Story URL bank throughout the story
-  - Embed 1-2 tweets from Tweet bank: > "tweet text" — [@handle](url)
-  - Embed 1-2 YouTube videos from YouTube bank: 🎬 [Title](url)
-  - Include 1 poll per story (question + 2-3 options as bullet list)
+  - Max 2 media embeds total (tweets + YouTube combined). Only embed tweets that add NEW info.
+  - NO poll in the secondary story (the main story already has one), UNLESS the secondary story has a much more compelling poll question — in which case, move the poll here and skip it in the main story.
 8. **Weekly Scoop 📢** - Output as "## Weekly Scoop 📢" followed by 6 headlines
   - Each headline: emoji + [markdown link](url)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
@@ -687,8 +700,8 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ Newsletter Title (just the text, NO "Section 3:" label)
 ✓ Welcome message (starts with "Welcome to Jumble...")
 ✓ "In this newsletter:" bullets (5 bullets with emojis, EACH ON A SEPARATE LINE)
-✓ Main Story (separate H1 like "# 🤖 Title", ~${limits.target} words, with 5-7 embedded links, 1-2 tweets, 1-2 YouTube videos, 1 poll)
-✓ Secondary Story (separate H1 like "# 💡 Title", ~${limits.target} words, with 5-7 embedded links, 1-2 tweets, 1-2 YouTube videos, 1 poll)
+✓ Main Story (separate H1 like "# 🤖 Title", ~${limits.target} words, with 5-7 embedded links, max 2 media embeds, 1 opinionated poll)
+✓ Secondary Story (separate H1 like "# 💡 Title", ~${limits.target} words, with 5-7 embedded links, max 2 media embeds, NO poll unless it's better than the main story's)
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
   - ✅ 🤖 [Headline text](https://url.com) = CORRECT
   - ❌ 🤖 Headline text = WRONG (missing URL)
@@ -730,14 +743,17 @@ Write the COMPLETE newsletter. Overclocked is conversational, punchy, like texti
 2. **Main Story**: lowercase headline + emoji at END (e.g., "Claude just became #1 in the app store 👑")
    - Italic teaser line: *short provocative question*
    - Body text, ~${limits.target} words
-   - 2-3 lowercase Q&A sub-headers (e.g., "what happened?", "👀 wait, them too?")
+   - 2-3 lowercase Q&A sub-headers that are SPECIFIC to the story. Do NOT use generic questions like "what happened?" or "why does this matter?". Instead reference specific details: "....$38 million and he's mad?", "so Canada forced their hand?", "👀 wait, them too?"
    - Embed 3-5 URLs from Main Story URL bank
-   - Embed 1 tweet from Main Story Tweets bank: > "tweet text" — [@handle](url)
-   - Embed 1 YouTube video from Main Story YouTube bank: 🎬 [Title](url)
-   - 1 poll: question + 2-3 options as bullet list
+   - ONE YouTube video OR one tweet (not both). Prefer YouTube — it looks better and gets more clicks. Only use a tweet if no good YouTube video exists.
+   - Only embed tweets that add NEW information. Skip tweets that just announce the news.
+   - 1 poll: question + 2-3 options. Must be something people are heavily opinionated about (personal behavior, moral debate, fear/concern, interactive challenge).
+   - Good polls: "What grade should your child start learning AI?", "Are you worried about AI taking your job?", "Should AI have rights?"
 3. **Secondary Story**: same format as main, lowercase headline + emoji at END
-   - Italic teaser, ~${limits.target} words, Q&A sub-headers
-   - 3-5 URLs, 1 tweet, 1 YouTube, 1 poll
+   - Italic teaser, ~${limits.target} words
+   - Q&A sub-headers must be SPECIFIC to THIS story (not generic)
+   - 3-5 URLs, ONE YouTube video OR one tweet (not both, prefer YouTube)
+   - NO poll (main story already has one), unless this story has a much more compelling poll question
 4. **weekly scoop 🍦** (lowercase): 6 emoji headlines, each as [text](url)
 5. **weekly challenge**: "what's the challenge?" intro, 3-5 emoji steps
 6. **Wrap Up**: 1-2 questions + "We'd love to hear your thoughts!"

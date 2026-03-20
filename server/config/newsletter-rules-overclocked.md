@@ -17,12 +17,16 @@ Format: "Mon, March 14 at 6:00 AM" (day of week, full month, day, time).
 Main Story
 Lowercase headline with emoji at END (ex. "Claude just became #1 in the app store 👑")
 Italic teaser line immediately after (ex. "*it's ahead of ChatGPT now?*")
-Two to three lowercase Q&A sub-headers (ex. "what happened?", "👀 wait, them too?", "....but, why now?")
+Two to three lowercase Q&A sub-headers. These MUST be specific to the story, not generic. Do NOT use vague questions like "wait, what happened?" or "so what does this mean?". Instead, reference specific details from the story. They should sound like something you would actually say to a friend in a text conversation: casual and short, but specific. Good examples: "👀 wait, them too?", "....$38 million and he's mad?", "so Canada forced their hand?". Bad examples: "what happened?", "why does this matter?", "what's next?"
 75 to 175 words total. Punchy, conversational, like texting a friend who follows tech.
 3 to 5 embedded source links.
-One embedded tweet: > "tweet text" — [@handle](url)
-One embedded YouTube video: 🎬 [Video Title](youtube-url)
-One poll after a key claim (question + 2-3 options as a list).
+One YouTube video OR one tweet per headline story (not both). Prefer YouTube videos (they look better as text messages and get more clicks). Only use a tweet if there is no good YouTube video available.
+Tweets must add NEW information or show something interesting beyond the story itself. Do NOT include tweets that simply announce or restate the news.
+YouTube videos: 🎬 [Video Title](youtube-url)
+Tweets: > "tweet text" — [@handle](url)
+One poll per NEWSLETTER (not per story). Place it in the main story after a key claim, unless the secondary story has a more compelling poll question.
+Poll questions should be things people are heavily opinionated about. Best patterns: personal behavior questions ("Do you do X?"), moral or ethical debates ("Should X be allowed?"), questions that touch on fears or concerns, or interactive challenges.
+Examples of high-performing polls: "What grade should your child start learning AI?", "Are you worried about AI taking your job?", "Which photo is real?", "How do you feel about AI guessing your age?", "Should AI have rights?"
 (ex. '
 Canada forces OpenAI to rewrite safety rules 🚨
 
@@ -45,9 +49,10 @@ Should AI companies be required to report concerning users?
 
 Secondary Story
 Same format as main story. Lowercase headline with emoji at END.
-Italic teaser line. Q&A sub-headers. 75 to 175 words.
+Italic teaser line. Q&A sub-headers (must be specific to the story, not generic). 75 to 175 words.
 3 to 5 embedded source links.
-One tweet embed. One YouTube video embed. One poll.
+One YouTube video OR one tweet (not both). Prefer YouTube. Same quality rules as main story.
+No poll in the secondary story unless the main story did not have one AND the secondary story has a more compelling poll question.
 (ex. '
 DeepMind staff protests military AI contracts 🧠
 
@@ -128,4 +133,6 @@ Anchors are descriptive noun phrases of 3 to 9 words.
 Tracking parameters removed. Canonical URLs preferred.
 Headers are lowercase. Emojis at end of headlines.
 Word counts are 75 to 175 per story.
-Each story has one tweet, one YouTube video, and one poll.
+Each story has one YouTube video OR one tweet (not both). Prefer YouTube.
+One poll per newsletter total (in whichever story has the best poll question).
+Q&A sub-headers are specific to each story, not generic.

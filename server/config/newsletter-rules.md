@@ -77,9 +77,13 @@ If the jury finds in favor of Musk, the consequences could be catastrophic for O
 With Musk’s own xAI currently valued at over $230 billion, this trial is as much about market dominance as it is about legal ethics. The outcome will likely set a major precedent for how the biggest names in tech manage the tension between altruistic goals and massive profits.")
 Target length 200 to 250 words.
 Embed reputable, recent sources. Add placeholders for posts or video when needed.
-One to two embedded tweets per story: > "tweet text" — [@handle](url)
-One to two embedded YouTube videos per story: 🎬 [Video Title](youtube-url)
-One poll per story after a key claim (question + 2-3 options as a list).
+No more than 2 media embeds (tweets + YouTube videos combined) per headline story. Example: one YouTube video and one tweet, or two YouTube videos.
+Tweets must add NEW information or show something interesting beyond the story itself. Do NOT include tweets that simply announce or restate the news. If no tweet adds value, skip it.
+YouTube videos: 🎬 [Video Title](youtube-url)
+Tweets: > "tweet text" — [@handle](url)
+One poll per NEWSLETTER (not per story). Place it in the main story after a key claim, unless the secondary story has a more compelling poll question.
+Poll questions should be things people are heavily opinionated about. Best patterns: personal behavior questions ("Do you do X?"), moral or ethical debates ("Should X be allowed?"), questions that touch on fears or concerns, or interactive challenges.
+Examples of high-performing polls: "Is this a good idea?", "Do you say please and thank you to AI?", "Do you think AI can save you time?", "Have you tried GPT-5 yet?", "Are we replacing too many jobs with AI and robots?"
 Secondary Story
 H1 with emoji in the front (ex. 🧠 Gemini Evolves Into Your Personal Assistant)
 One intro paragraph.
@@ -104,10 +108,12 @@ I Tested Gemini's New 'Personal Intelligence' and It's Revealing
 
 It can even help with big purchases by researching products that fit your specific needs and past preferences. By remembering your hobbies and life goals, the AI offers suggestions that feel more like advice from a close friend than a search engine result. It is a bold step toward AI that doesn't just process information but understands your personal narrative.')
 Target length 200 to 250 words.
-Same linking rules as above.
-One to two embedded tweets per story: > "tweet text" — [@handle](url)
-One to two embedded YouTube videos per story: 🎬 [Video Title](youtube-url)
-One poll per story after a key claim (question + 2-3 options as a list).
+Same linking and media rules as the main story.
+No more than 2 media embeds (tweets + YouTube videos combined).
+Tweets must add NEW information, not just announce the story.
+YouTube videos: 🎬 [Video Title](youtube-url)
+Tweets: > "tweet text" — [@handle](url)
+No poll in the secondary story unless the main story did not have one AND the secondary story has a more compelling poll question.
 Weekly Scoop 📢
 Six headlines. Each headline MUST be an embedded markdown link with the URL inside.
 Format: 🤖 [Headline text describing the story](https://actual-source-url.com)
