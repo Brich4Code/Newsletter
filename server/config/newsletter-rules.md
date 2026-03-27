@@ -1,5 +1,5 @@
 Hello Jumble Newsletter Rules
-Last updated: 2026-03-14
+Last updated: 2026-03-27
 Core Principles
 No two part headers and no punctuation in headers (no dashes, colons, commas).
 Headers use Title Case.
@@ -16,7 +16,12 @@ Do not include outlet names in anchors unless the outlet itself is the subject.
 For videos or posts, use a descriptive anchor such as “the video report” or “the statement on X from Name”. Prefer the publisher page over rehosted clips.
 Section Structure And Word Counts
 Subject Line
-40 to 60 characters. Clicky. Focused on the main story. Different from the Newsletter Title and H1.
+40 to 60 characters. Different from the Newsletter Title and H1.
+Use emotional or provocative framing over informational summaries. Data shows subject lines that provoke curiosity, fear, or strong opinions get 10 to 15 percentage points higher open rates than neutral headlines.
+Top performing patterns: existential or safety questions, corporate controversy, unexpected outcomes, personal stakes.
+High open rate examples: "Canada forces OpenAI to change safety rules" (43%), "Is Claude conscious? We actually don't know" (47%), "AI researchers give final warnings for humanity" (46%).
+Lower open rate examples to avoid: "Inside Claude's 81K-user AI study" (32%), "Bumble buzzes into AI matchmaking" (36%). These are informational, not emotional.
+Aim for a reaction like "wait, what?" not "oh, interesting."
 Preview Text
 Tease the secondary story and one Weekly Scoop item.
 (ex. 1 'Hyundai hires 30k robots + Grok goes off the rails' ex. 2 'Musk vs OpenAI + Matthew McConaughey fights AI')
@@ -134,11 +139,11 @@ Format: 🤖 [Headline text describing the story](https://actual-source-url.com)
 CRITICAL: Each headline MUST be a clickable markdown link [text](url) - NOT plain text.
 No bullet points, just one line each with emoji in front followed by the markdown link.
 Each has an emoji and a single, unique embedded URL. Do not duplicate links used elsewhere.
-Use varied, reputable outlets. Include one YouTube or video link when relevant.
+Use varied, reputable outlets. Include at least one YouTube video link (YouTube consistently gets the most clicks). Aim for two YouTube links across the six headlines when good videos are available.
 Do not repeat items already used in main or secondary stories.
 Weekly Challenge
 Unique and timely, tied to this issue.
-150 to 200 words with clear steps or scoring.
+125 to 175 words with clear steps or scoring. Keep it snappy. Readers skim challenges, so shorter is better.
 (ex. 1 '
 Challenge: This week, we are stepping into the "agentic year" by building your first automated AI workflow. You don't need to be a developer to do this. Tools like Zapier and Make make it as easy as clicking a few buttons.
 

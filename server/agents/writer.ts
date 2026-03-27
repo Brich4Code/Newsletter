@@ -501,14 +501,14 @@ ${rules}
 Write the COMPLETE newsletter following the structure and rules defined in the STYLE GUIDE section above.
 Use the research notes to craft engaging, fact-checked content.
 
-🚨 CRITICAL: This is a LONG newsletter (~2500+ words). You MUST generate ALL sections below. DO NOT stop after the main story or secondary story. KEEP GENERATING until you reach the Sources section at the very end.
+🚨 CRITICAL: You MUST generate ALL sections below. DO NOT stop after the main story or secondary story. KEEP GENERATING until you reach the Sources section at the very end.
 
 # REQUIRED COMPLETE STRUCTURE - YOU MUST INCLUDE ALL OF THESE SECTIONS IN ORDER:
 
 🚨 CRITICAL: Do NOT include section numbers or labels like "Section 1:", "Section 2:", etc. in your output.
 The sections below are numbered for YOUR reference only - do NOT output these numbers.
 
-1. **Subject Line** (40-60 characters) - Output ONLY the subject line text, no label
+1. **Subject Line** (40-60 characters) - Output ONLY the subject line text, no label. Use emotional or provocative framing, NOT informational summaries. Aim for "wait, what?" reactions.
 2. **Preview Text** (Tease secondary story + one Weekly Scoop item) - Output ONLY the preview text, no label
 3. **Newsletter Title** (≤60 characters, fresh angle on main story) - Output ONLY the title text, no label
 4. **Welcome To This Week's Edition Of Jumble** (45-70 words, end with ⬇️) - Start with "Welcome to Jumble..."
@@ -534,7 +534,7 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 8. **Weekly Scoop 📢** - Output as "## Weekly Scoop 📢" followed by 6 headlines
   - Each headline: emoji + [markdown link](url)
   - 🔗 Each headline MUST have exactly 1 embedded URL from Weekly Scoop URL bank
-9. **Weekly Challenge** (150-250 words) - Output as "## Weekly Challenge" followed by:
+9. **Weekly Challenge** (125-175 words) - Output as "## Weekly Challenge" followed by:
   - Fun, casual intro (1-2 sentences) that makes readers WANT to try it
   - 3-5 simple steps, each with a unique emoji prefix
   - Tone: like a friend explaining something cool, NOT a technical manual
@@ -557,7 +557,7 @@ The sections below are numbered for YOUR reference only - do NOT output these nu
 2. Do NOT include "Section 1:", "Section 2:", etc. in your output - output the content directly
 3. The Main Story and Secondary Story MUST have separate H1 headers (# Header)
 4. The newsletter is NOT complete until you write the Sources section
-5. Expected total length: 2500+ words
+5. Keep it tight - hit the word count targets per section, don't pad
 
 📋 OUTPUT FORMAT EXAMPLE (showing correct structure WITHOUT section labels):
 \`\`\`
@@ -705,7 +705,7 @@ Before ending your output, verify you have written ALL of these sections:
 ✓ Weekly Scoop - VERIFY EACH OF THE 6 HEADLINES IS A MARKDOWN LINK:
   - ✅ 🤖 [Headline text](https://url.com) = CORRECT
   - ❌ 🤖 Headline text = WRONG (missing URL)
-✓ Weekly Challenge (150-250 words with 3-5 emoji-prefixed steps, 1-2 links max, fun and approachable tone)
+✓ Weekly Challenge (125-175 words with 3-5 emoji-prefixed steps, 1-2 links max, fun and approachable tone)
 ✓ Wrap Up
 ✓ Sources section
 
@@ -911,7 +911,7 @@ CRITICAL: Output ONLY the newsletter. No explanations. Wrap in \`\`\`markdown ..
 
   /**
    * Phase 3: Validate word counts for main and secondary stories
-   * Ensures both stories are between 325-450 words (50 word tolerance over 400)
+   * Ensures both stories are within the configured WORD_LIMITS range per newsletter type
    * Auto-fixes if out of range while preserving all embedded links
    */
   private async validateAndFixWordCounts(draft: string, type: NewsletterType): Promise<string> {

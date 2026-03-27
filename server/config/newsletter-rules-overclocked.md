@@ -1,5 +1,5 @@
 Overclocked Newsletter Rules
-Last updated: 2026-03-14
+Last updated: 2026-03-27
 Core Principles
 Lowercase conversational headers. No Title Case except proper nouns.
 Emoji goes at the END of story headlines, not the beginning.
@@ -12,6 +12,12 @@ Link the first mention only and use each exact URL once across the newsletter.
 No bare URLs. Strip tracking parameters (utm, ref, share). Prefer canonical URLs.
 Place anchors over claims or nouns, not over punctuation.
 Section Structure And Word Counts
+Subject Line
+40 to 60 characters. Use emotional or provocative framing over informational summaries.
+Top performing patterns: existential or safety questions, corporate controversy, unexpected outcomes, personal stakes.
+High open rate examples: "Canada forces OpenAI to change safety rules" (43%), "Is Claude conscious? We actually don't know" (47%), "AI researchers give final warnings for humanity" (46%).
+Lower open rate examples to avoid: "Inside Claude's 81K-user AI study" (32%), "Bumble buzzes into AI matchmaking" (36%). These are informational, not emotional.
+Aim for a reaction like "wait, what?" not "oh, interesting."
 Date Line
 Format: "Mon, March 14 at 6:00 AM" (day of week, full month, day, time).
 Main Story
@@ -76,7 +82,7 @@ Is it too late to stop AI in military use?
 weekly scoop 🍦
 Six headlines. Each headline MUST be an embedded markdown link with the URL inside.
 Format: emoji [Headline text](url)
-All lowercase section header. One headline may include a YouTube video link.
+All lowercase section header. Include at least one YouTube video link (YouTube consistently gets the most clicks). Aim for two YouTube links across the six headlines when good videos are available.
 (ex. '
 weekly scoop 🍦
 🤖 [ServiceNow introduces AI specialists that think and act](https://url.com)
@@ -90,7 +96,7 @@ weekly challenge
 Start with "what's the challenge?" in lowercase.
 Brief intro paragraph explaining the challenge.
 3 to 5 steps with emoji prefixes. Casual tone.
-150 to 250 words.
+125 to 175 words. Keep it snappy. Readers skim challenges, so shorter is better.
 (ex. '
 weekly challenge
 
